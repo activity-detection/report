@@ -1,0 +1,82 @@
+\DocumentMetadata{
+    pdfversion = 2.0,            % Nowoczesny standard PDF
+    lang       = pl-PL,          % Język dokumentu w metadanych PDF
+    pdfstandard = A-2b,          % Opcjonalnie: standard archiwizacyjny PDF/A (często wymagany przez uczelnie)
+    uncompress               % Opcjonalnie: kompresja strumieni PDF (zmniejsza rozmiar pliku)
+}
+
+\documentclass[
+    fontsize=11pt,
+    paper=a4,
+    twoside=false,              % Jednostronny (częsty wymóg dla prac dyplomowych/raportów)
+    titlepage=true,             % Strona tytułowa jako osobna strona
+    headinclude=true,           % Włączenie nagłówka do obliczeń marginesów
+    footinclude=false,          % Wyłączenie stopki z obliczeń marginesów
+    BCOR=5mm,                   % Poprawka na oprawę / bindo-wanie
+    DIV=11,                     % Współczynnik podziału strony (automatyczne, idealne marginesy)
+    parskip=half,               % Odstępy między akapitami zamiast wcięć (modern layout)
+    numbers=endperiod,           % Brak kropki na końcu numeracji (np. Sekcja 1.2 zamiast 1.2.)
+    listof=totoc,               % Dodaj spisy tabel i rysunków do Spisu Treści (TOC)
+    index=totoc,                 % Dodaj indeks do Spisu Treści (TOC)
+    bibliography=totoc,          % Dodaj bibliografię do Spisu Treści (TOC)
+    abstract=on,
+]{scrreprt}
+
+\usepackage{preamble}
+
+\titlehead{
+    \begin{center}
+        \sffamily\bfseries\large POLITECHNIKA WARSZAWSKA\\
+        \small Wydział Elektryczny
+    \end{center}
+    \vspace{10mm}
+}
+
+\subject{PROJEKT ZESPOŁOWY}
+\title{System czasu rzeczywistego detekcji zachowań osób na strumieniach danych z monitoringu wizyjnego}
+\subtitle{Dokumentacja Techniczna i Raport Końcowy}
+\author{
+\textbf{Mateusz Ciurzyński} \\ 331676
+\and \textbf{Norbert Gwiazda} \\ 331694
+\and \textbf{Bartosz Piłat} \\ 331727
+\and \textbf{Borys Piątek} \\ 331725
+\and \textbf{Filip Kobus} \\ 331703
+}
+
+\date{
+    \vspace{20mm}
+    {\large Opiekun projektu:}\\[0.5em]
+    {\large\bfseries dr\ hab.\ inż.\ Marcin\ Iwanowski}\\[4pt]
+    \vfill
+    \today
+}
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+W ramach projektu zaprojektowano i zaimplementowano system czasu rzeczywistego przeznaczony do detekcji zachowań osób na strumieniach danych z monitoringu wizyjnego, przystosowany do integracji z infrastrukturą kamer Politechniki Warszawskiej. Rozwiązanie oparto na potokowym przetwarzaniu obrazu na żywo w oparciu o konfigurowalne szablony detekcji, które precyzują kombinację oraz liczbę obiektów lub zachowań inicjujących rejestrację zdarzenia. 
+
+Moduł detekcji zaimplementowano w języku Python z wykorzystaniem modeli uczenia maszynowego rozpoznających 9 klas obiektów (w tym ludzi, pojazdy i niebezpieczne narzędzia) oraz 7 typów zachowań (m.in. upadki, bieg czy wkroczenie w strefę zakazaną). Wdrożono algorytm izolowania fragmentów wideo z buforem czasowym, który zintegrowano z modułem automatycznej anonimizacji twarzy oraz tablic rejestracyjnych. Podsystem zarządzania danymi zrealizowano poprzez ciągły zapis kilkusekundowych segmentów wideo powiązanych w bazie danych strukturą listy jednokierunkowej, co zminimalizowało opóźnienia zapisu dyskowego i umożliwiło wydajne odtwarzanie ciągłego materiału za pomocą protokołu strumieniowania DASH. 
+
+Testy systemu przeprowadzono na nagraniach symulujących docelowe otoczenie kampusu uczelni. Poczynione obserwacje wykazały skuteczność potokowej architektury danych oraz zdefiniowały kierunek dalszego rozwoju projektu w stronę implementacji przetwarzania równoległego dla jednoczesnej obsługi wielu kamer.
+\end{abstract}
+
+\cleardoublepage
+\tableofcontents                
+\cleardoublepage
+
+
+\include{chapters/wstep}
+
+\include{chapters/architektura}
+
+\include{characters/detektor}
+\include{chapters/backend}
+\include{chapters/frontend}
+
+\include{chapters/zakonczenie}
+
+
+\printbibliography
+\end{document}

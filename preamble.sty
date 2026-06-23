@@ -1,0 +1,116 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{preamble}[Preamble]
+
+% ==========================================
+% 1. Czcionki i Język (Silnik LuaLaTeX)
+% ==========================================
+
+\usepackage{fontspec}
+\usepackage[polish]{babel}
+\usepackage[autostyle=true]{csquotes}
+
+% Współczesne pakiety matematyczne dla LuaLaTeX zamiast amsmath/amsfonts
+\usepackage{unicode-math} 
+\setmainfont{Latin Modern Roman}
+\setmathfont{Latin Modern Math}
+
+% ==========================================
+% 2. Typografia i Geometria Obrazu
+% ==========================================
+\usepackage{microtype} 
+\usepackage{setspace}
+\onehalfspacing % Zgodne z wytycznymi PW (1.5 interlinii)
+
+% KOMA-Script naturalnie zarządza marginesami (typearea), ale jeśli 
+% wydział sztywno wymaga 2.6cm z każdej strony, odkomentuj poniższą linię:
+% \usepackage[a4paper, margin=2.6cm, headsepline=0.4pt]{geometry}
+
+\raggedbottom % Zapobiega brzydkiemu rozciąganiu pionowemu tekstu przez LaTeX
+
+% ==========================================
+% 3. Kolory i Stylistyka KOMA-Script
+% ==========================================
+\usepackage{xcolor}
+\definecolor{pwblue}{RGB}{0, 101, 169}   % Reprezentacyjny błękit PW
+\definecolor{darkgray}{RGB}{50, 50, 50}
+\definecolor{codebackground}{RGB}{245, 245, 245}
+
+% Globalne zarządzanie krojami pisma (KOMA-Script native)
+\AtBeginDocument{%
+    \addtokomafont{disposition}{\color{pwblue}\sffamily\bfseries}
+    \addtokomafont{chapter}{\LARGE}
+    \addtokomafont{section}{\Large}
+    \addtokomafont{title}{\normalfont\sffamily\bfseries\Huge\color{pwblue}}
+    \addtokomafont{subtitle}{\normalfont\sffamily\large\color{darkgray}}
+    \addtokomafont{author}{\normalfont\normalsize}
+    \addtokomafont{date}{\normalfont\normalsize\color{darkgray}}
+}
+
+% ==========================================
+% 4. Nagłówki i Stopki (scrlayer-scrpage)
+% ==========================================
+\usepackage[automark, headsepline=0.4pt]{scrlayer-scrpage}
+\clearpairofpagestyles
+\ihead{\headmark}  % Tytuł rozdziału po wewnętrznej/lewej
+\ohead{\pagemark}  % Numer strony po zewnętrznej/prawej
+\setkomafont{pageheadfoot}{\sffamily\footnotesize}
+\setkomafont{pagenumber}{\sffamily\small\bfseries}
+
+% ==========================================
+% 5. Grafika, Wykresy (Przywrócone ze starej)
+% ==========================================
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{svg} % Potrzebne, jeśli wstawiasz rysunki .svg
+\usepackage{caption}
+\usepackage{subcaption}
+
+\captionsetup{
+    font=small,
+    labelfont={bf,color=pwblue}, % Niebieskie i pogrubione podpisy "Rysunek 1.1"
+    margin=10pt
+}
+
+% TikZ - zaawansowana grafika wektorowa
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+
+% ==========================================
+% 6. Kody źródłowe (Listingi)
+% ==========================================
+\usepackage{listings}
+\lstset{
+    backgroundcolor=\color{codebackground},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    captionpos=b,
+    frame=single,
+    rulecolor=\color{darkgray},
+    keywordstyle=\color{pwblue}\bfseries,
+    commentstyle=\color{gray}
+}
+
+% ==========================================
+% 7. Linki, Bibliografia i Cleveref
+% ==========================================
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    allcolors=black
+}
+\usepackage[nameinlink]{cleveref}
+\usepackage{url}
+
+\usepackage[backend=biber, style=numeric, maxcitenames=1, mincitenames=1, sorting=none]{biblatex}
+\addbibresource{biblio.bib}
+
+% ==========================================
+% 8. Konfiguracja Nazewnictwa i Odmian (cleveref)
+% ==========================================
+% Zamiast starego i błędnego \addto\captionspolish (które psuło bibliografię w biblatex),
+% używamy natywnego mechanizmu językowego z cleveref:
+
+\DeclareBibliographyCategory{materiały} % Czyste zarządzanie źródłami
+
+
+\endinput

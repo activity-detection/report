@@ -1,0 +1,344 @@
+\section{Infrastruktura projektowa}
+% TUTAJ OPISUJEMY JAK WYGLĄDA SYSTEM, MOŻE JAKIŚ DIAGRAM TAK JAK BYŁ NA
+% BIGDATCIE. Nie wstawiamy tutaj screenów z działania programu! Do tego
+% jest sekcja "Prezentacja funkcjonalności"
+% Podopisujcie kto za co byl odpowiedzialny bo Iwanowski prosil. Ja uzylem:
+% \subsection{System zarządzania wykrytymi zachowaniami}
+% 
+% \small \textit{Autor1, Autor2 ...}
+
+\subsection{System detekcji zachowań}
+
+\small \textit{Mateusz Ciurzyński, Borys Piątek, Filip Kobus}
+
+Rdzeniem architektury zrealizowanego projektu jest moduł detekcji zachowań. Komponent ten został zaimplementowany w języku Python, co pozwoliło na optymalną integrację z wiodącymi rozwiązaniami z zakresu uczenia maszynowego. Obliczenia tensorowe oraz akceleracja sprzętowa realizowane są przy użyciu frameworka PyTorch, natomiast obsługa modeli wizyjnych z rodziny YOLO opiera się na bibliotece Ultralytics. Moduł działa jako niezależna usługa przetwarzająca dane w czasie rzeczywistym, do której głównych obowiązków należy:
+
+\begin{itemize}
+    \item \textbf{Akwizycja i dekodowanie strumieni wideo} – system w sposób ciągły łączy się z infrastrukturą kamer, pobiera nadchodzące klatki obrazu i buforuje je w pamięci operacyjnej. Gwarantuje to płynność potokowego przetwarzania danych nawet w przypadku chwilowych spadków przepustowości sieci.
+    \item \textbf{Wielopoziomowa analiza obrazu w czasie rzeczywistym} – system odpowiada za ciągłą inferencję głębokich sieci neuronowych na pobieranych klatkach. Proces ten obejmuje równoległą detekcję i śledzenie zdefiniowanych klas obiektów, ekstrakcję punktów kluczowych szkieletu ludzkiego oraz klasyfikację dynamiki zachowań.
+    \item \textbf{Zarządzanie zdarzeniami i integracja z serwisem nadrzędnym} – aplikacja implementuje logikę decyzyjną walidującą wyniki detekcji z aktywnymi szablonami zagrożeń. W momencie zidentyfikowania anomalii, moduł izoluje odpowiedni fragment nagrania wideo (uwzględniając bufory czasowe), wzbogaca go o wygenerowane metadane i asynchronicznie przesyła za pośrednictwem protokołu HTTP do backendu w celu trwałego składowania i dystrybucji.
+\end{itemize}
+
+
+
+\subsection{System zarządzania wykrywanymi zachowaniami}
+
+\small \textit{Bartosz Piłat, Norbert Gwiazda}
+
+Głównym komponentem odpowiedzialnym za logikę biznesową, zarządzanie danymi oraz komunikację z interfejsem użytkownika jest dedykowany serwis zarządzania wykrywanymi zachowaniami. Aplikacja została zaimplementowana w języku Java z wykorzystaniem frameworka Spring Boot, co zapewnia wysoką wydajność, skalowalność oraz modułowość architektury, przydatną przy ewentualnym dalszym rozwoju projektu. 
+
+Serwis pełni funkcję punktu centralnego systemu, który z jednej strony udostępnia interfejs API dla modułów przetwarzania obrazu w celu rejestracji zdarzeń, a z drugiej dostarcza zabezpieczone endpointy używane w ramach frontendu. Do zadań tego komponentu należy:
+\begin{itemize}
+    \item \textbf{Nadzorowanie hybrydowego modelu składowania danych} - gdzie surowe nagrania przetrzymywane są bezpośrednio na dysku, a reszta danych w bazie PostgreSQL.
+    \item \textbf{Zarządzanie cyklem życia nagrań wideo} - poprzez dodawanie, usuwanie, edycję wpisów wykryć, jak również ich synchronizacji w przypadku kiedy powiązane pliki nagrań wideo przestaną istnieć.
+    \item \textbf{Obsługa konfiguracji szablonów detekcji}
+    \item \textbf{Realizacja procesu strumieniowania wideo} - poprzez protokół DASH oraz wysyłanie danych w postaci HTTP 206 Partial Content.
+\end{itemize}
+
+\subsection{Interfejs użytkownika}
+
+\small \textit{Norbert Gwiazda, Filip Kobus}
+
+Warstwą prezentacyjną, będącą interfejsem użytkownika stanowi serwer webowy, umożliwiający zarządzanie aplikacją i przeglądanie detekcji z poziomu przeglądarki internetowej. Moduł oparty jest o biblioteki \texttt{Next.js} i \texttt{React}, które wprowadzają modularną architekturę oraz możliwość jasnego wskazania, które elementy mają być renderowane po stronie użytkownika, a które po stronie serwera.
+
+Aplikację zaprojektowano w architekturze \textbf{Single Page Application (SPA)} z celowym pominięciem mechanizmów routingu. Można wyodrębnić trzy warstwy aplikacji: 
+\begin{enumerate}
+    \item \textbf{Łączność z API} -- odpowiadają za nie interfejsy punktów końcowych wygenerowanych z użyciem biblioteki \texttt{Orval} oraz dedykowany klient HTTP służący do wysyłania zapytań do modułu API.
+    \item \textbf{Logika aplikacji} -- obejmuje zarządzanie stanem komponentów za pomocą kontenera (\textit{Store}) biblioteki \texttt{Zustand} oraz asynchroniczne hooki oparte na bibliotece \texttt{TanStack Query}, których celem jest obsługa konkretnych akcji i synchronizacja danych po stronie interfejsu.
+    \item \textbf{Komponenty interfejsu} -- struktury widocznych w przeglądarce konkretnych elementów wizualnych, zaprojektowanych przy użyciu biblioteki \texttt{React} oraz ostylowane z wykorzystaniem narzędzi \texttt{Tailwind CSS} oraz \texttt{shadcn/ui}.
+\end{enumerate}
+
+Projekt modułu wykracza poza minimalne wymagania obecnych funkcjonalności, co stanowi celowy zabieg architektoniczny. Taka struktura umożliwia dalsze rozbudowywanie aplikacji o nowe elementy zarówno w obrębie warstwy API, jak i serwera webowego.
+
+
+\section{Opis funkcjonalności}
+% OPIS JAKIE SĄ FUNKCJE W SYSTEMIE
+
+\subsection{System detekcji zachowań}
+
+
+Moduł detekcji to napisana w języku Python warstwa analityczna systemu, oparta na modelach YOLO oraz sieci LSTM. Pobiera kolejne klatki ze strumienia wideo, rozpoznaje na nich obiekty i zachowania osób, a następnie sprawdza, czy stan kadru odpowiada któremuś z aktywnych wektorów detekcji. Jeśli tak, uruchamiana jest rejestracja zdarzenia.
+
+Przetwarzanie pojedynczej partii klatek przebiega w kilku krokach:
+\begin{itemize}
+    \item \textbf{Detekcja obiektów} - bazowy model YOLO, douczony pod kątem klas istotnych dla bezpieczeństwa, wykrywa i śledzi obiekty w kadrze.
+    \item \textbf{Estymacja pozy} - drugi model YOLO wykrywa osoby i wyznacza dla każdej z nich 17 punktów szkieletu.
+    \item \textbf{Klasyfikacja zachowań} - punkty szkieletu każdej śledzonej osoby trafiają do sieci LSTM, która rozpoznaje wykonywaną czynność.
+    \item \textbf{Analiza sceny} - rozpoznawane jest naruszenie stref zakazanych oraz formowanie się tłumu.
+\end{itemize}
+
+Wyniki wszystkich kroków dla danej klatki łączone są w jeden wektor zliczający wystąpienia poszczególnych obiektów i zachowań. Wektor ten porównywany jest z aktywnymi szablonami detekcji, a wykrycie pasującej kombinacji uruchamia rejestrację zdarzenia.
+
+Aby sieć LSTM otrzymywała spójny czasowo ruch jednej osoby, system utrzymuje osobną historię szkieletu dla każdej śledzonej osoby. Krótkie przerwy w śledzeniu uzupełniane są ostatnią znaną pozą, a dłuższe powodują wyczyszczenie historii, dzięki czemu w jednym oknie czasowym nie mieszają się rozdzielone luką fragmenty ruchu. Współrzędne szkieletu są przy tym normalizowane względem tułowia, co uniezależnia rozpoznawanie od położenia osoby w kadrze i jej odległości od kamery.
+
+Decyzja o zapisie nie zależy od pojedynczej klatki. Zdarzenie rozpoczyna się dopiero, gdy warunek szablonu utrzymuje się przez odpowiednią część ostatnich klatek, trwa mimo chwilowego ustania zachowania i kończy się po zadanym czasie bezczynności. Dzięki temu do nagrania trafia również bufor sprzed i po zdarzeniu. Zarówno aktywne szablony, jak i strefy zakazane detektor pobiera na bieżąco z serwisu zarządzającego, dzięki czemu reguły można zmieniać bez ponownego uruchamiania systemu.
+
+\subsubsection{Przygotowanie danych i trenowanie modeli}
+\small \textit{Filip Kobus, Mateusz Ciurzyński}
+
+Model rozpoznający zachowania powstał w osobnym etapie badawczym, obejmującym dobór modeli, przygotowanie danych oraz trening klasyfikatora. Prace prowadzono w zestawie notatników badawczych i zautomatyzowanym potoku narzędziowym uruchamianym poleceniami \texttt{make}.
+
+Na początku porównano warianty modelu estymacji pozy YOLO11 pod kątem jakości i szybkości działania. Wybrano wariant średni jako najlepszy kompromis, a rozdzielczość wejściową ograniczono, co wyraźnie przyspieszyło przetwarzanie przy akceptowalnej dokładności.
+
+Dane treningowe pozyskano ze zbioru Kinetics-700, z którego wybrano nagrania odpowiadające interesującym nas zachowaniom. Z każdego nagrania wyodrębniono współrzędne punktów szkieletu, które znormalizowano w taki sam sposób, jak podczas pracy systemu. Do nadawania etykiet wykorzystano heurystykę opartą na energii ruchu wybranych punktów ciała, a równolegle badano użycie modelu wizyjno-językowego do automatycznego opisywania nagrań.
+
+Docelowym klasyfikatorem jest dwuwarstwowa sieć LSTM. Na jej wejście podawane są sekwencje o długości 30 klatek, czyli około jednej sekundy nagrania, a wynikiem jest jedna z pięciu rozpoznawanych klas zachowań. Wytrenowane wagi modelu wczytywane są przez moduł produkcyjny przy starcie systemu.
+
+\subsubsection{Potok przetwarzania zarejestrowanych zdarzeń}
+\small \textit{Borys Piątek}
+
+Zarejestrowany materiał przechodzi przez wieloetapowy potok, którego zadaniem jest wyodrębnienie spójnego fragmentu zdarzenia, opatrzenie go metadanymi oraz niezawodne dostarczenie do serwisu nadrzędnego, przy czym kosztowne kodowanie wideo i komunikacja sieciowa odbywają się w tle i nie wstrzymują głównej pętli detekcji.
+
+System utrzymuje ciągły bufor ostatnich klatek, dzięki czemu nagranie obejmuje również materiał bezpośrednio poprzedzający zdarzenie oraz następujący po nim. Zdarzenia długotrwałe dzielone są na krótsze, kilkusekundowe segmenty, a następujące po sobie fragmenty tego samego zdarzenia wiązane są w listę jednokierunkową, którą serwis nadrzędny odtwarza jako jedną sekwencję. Równolegle budowany jest opis nagrania: dla każdej sekundy wyznaczana jest najczęstsza liczba poszczególnych obiektów, a sąsiednie sekundy o identycznej zawartości łączone są w przedziały czasowe, stanowiące później podstawę znaczników na osi czasu odtwarzacza.
+
+Przed składowaniem fragment poddawany jest anonimizacji, po czym trafia do kolejki obsługiwanej przez wątek roboczy, gdzie jest kodowany do formatu MP4 i przesyłany wraz z metadanymi. Etap ten zaprojektowano pod kątem niezawodności transmisji: segment będący kontynuacją zdarzenia wysyłany jest dopiero po potwierdzeniu zapisu poprzednika (co zachowuje ciągłość sekwencji), a nieudane wysyłki są ponawiane. Fragmenty, których mimo to nie udało się dostarczyć, np. wskutek dłuższych problemów z siecią, nie są odrzucane, lecz odkładane do osobnego magazynu, a powiązania zależnościowe są modyfikowane tak, aby pojedynczy nieudany segment nie blokował wysyłki kolejnych.
+
+\subsubsection{Detekcja zachowań}
+\small \textit{Filip Kobus}
+
+System rozpoznaje zarówno obiekty obecne w kadrze, jak i dynamiczne zachowania osób. Dzięki temu reguły detekcji mogą reagować nie tylko na samą obecność przedmiotów, ale i na ich współwystąpienie z określoną czynnością.
+
+Bazowy model wykrywa zbiór klas istotnych dla bezpieczeństwa, takich jak nóż, plecak, walizka, rower czy samochód. Każdemu obiektowi nadawany jest identyfikator utrzymywany pomiędzy klatkami, co pozwala śledzić go w czasie i unikać wielokrotnego zliczania tego samego przedmiotu.
+
+Zachowania osób rozpoznaje sieć LSTM na podstawie sekwencji ruchu szkieletu. Wyróżnianych jest pięć klas: zachowanie naturalne, pajacyki, przysiady, upadek oraz bieg.
+
+Operator definiuje w interfejsie użytkownika szablony detekcji. Każdy szablon składa się z jednego lub wielu wektorów detekcji, a pojedynczy wektor określa wymaganą kombinację obiektów lub zachowań oraz ich liczbę, na przykład obecność noża i jednoczesny upadek człowieka. Rejestracja uruchamiana jest, gdy spełniony zostanie którykolwiek z wektorów aktywnego szablonu.
+
+\subsubsection{Anonimizacja wizerunku}
+
+\small \textit{Mateusz Ciurzyński}
+
+Aby możliwe było publiczne wdrożenie systemu w zgodzie z wymogami ochrony prywatności, niezbędne jest zapewnienie anonimowości nagrywanych osób. Zadanie to realizowane jest poprzez zamazywanie twarzy postaci widocznych w kadrze kamery.
+
+W tym celu, zamiast tradycyjnych algorytmów detekcji twarzy, wykorzystano model estymacji szkieletu kinematycznego. Podejście to umożliwia skuteczną anonimizację wizerunku osób znajdujących się w znacznej odległości od kamery poprzez estymację położenia głowy na podstawie układu reszty ciała. Opisywany model uzyskał znacznie lepsze wyniki niż standardowe metody detekcji twarzy, które często zawodzą przy obiektach o niskiej rozdzielczości. Dodatkowym atutem jest optymalizacja zasobów obliczeniowych – dane o punktach kluczowych szkieletu są generowane na bieżąco na potrzeby modułu detekcji zachowań, co eliminuje konieczność uruchamiania dodatkowej sieci neuronowej.
+
+Mechanizm działania algorytmu opiera się na ekstrakcji współrzędnych oczu z wykrytego szkieletu. Na ich podstawie wyznaczany jest centralny punkt pomiędzy oczami. Następnie na wyliczony obszar nakładany jest kołowy filtr uśredniający (rozmywający). Promień maski filtru przyjmuje wartość dwukrotności odległości między okiem a wyznaczonym punktem środkowym. Proces ten aplikowany jest iteracyjnie dla każdej osoby wykrytej na danej klatce obrazu, co skutecznie uniemożliwia późniejszą identyfikację.
+
+\subsubsection{Anonimizacja tablic rejestracyjnych}
+\small \textit{Mateusz Ciurzyński}
+
+W celu kompleksowej ochrony prywatności i ograniczenia możliwości identyfikacji pojazdów zaimplementowano również mechanizm anonimizacji tablic rejestracyjnych. Operacja ta bazuje na wynikach działania głównego modelu z rodziny YOLO. Do zbioru treningowego wprowadzono dodatkową klasę reprezentującą tablice rejestracyjne, dzięki czemu proces ich lokalizacji odbywa się w ramach jednego przebiegu sieci, bez potrzeby wdrażania dedykowanego modelu.
+
+Do uczenia sieci wykorzystano publicznie dostępny zbiór danych z platformy Roboflow \cite{license-plate-recognition-rxg4e_dataset}. Aby poprawić skuteczność modelu w warunkach lokalnych, zbiór treningowy wzbogacono o autorskie dane pochodzące z kamery samochodowej. Umożliwiło to znacznie precyzyjniejszą detekcję polskich tablic rejestracyjnych.
+
+W fazie wnioskowania model zwraca prostokątne obwiednie (ang. \textit{bounding boxes}) określające położenie tablic na obrazie. Na wyznaczone w ten sposób regiony nakładany jest filtr uśredniający, co skutkuje efektywną eliminacją wrażliwych informacji wizualnych.
+
+\subsubsection{Wykrywanie naruszenia obszarów zakazanych}
+\small \textit{Filip Kobus}
+
+Oprócz rozpoznawania zachowań pojedynczych osób, system analizuje przestrzenny kontekst sceny. Najważniejszą funkcją tej analizy jest wykrywanie naruszeń stref zakazanych, czyli obszarów kadru, w których obecność osób jest niepożądana, takich jak trawniki.
+
+Strefy wyznacza operator w interfejsie użytkownika, zaznaczając kolejne wierzchołki wielokąta na klatce wybranego nagrania. Uzupełniająco detektor może je wczytać z lokalnego pliku konfiguracyjnego.
+
+Analiza wykorzystuje wyniki estymacji pozy obliczone już na potrzeby detekcji zachowań, nie wymagając dodatkowych obliczeń. Dla każdej osoby wyznaczany jest punkt styku z podłożem - uśredniona pozycja kostek, a gdy są one przesłonięte, środek dolnej krawędzi sylwetki. Sprawdzenie, czy ten punkt leży wewnątrz któregoś z wielokątów, pozwala policzyć osoby przebywające w strefach zakazanych. Liczba ta trafia do wektora detekcji i może być wykorzystana w szablonach, na przykład do wyzwolenia zapisu po wykryciu określonej liczby osób w strefie.
+
+W ramach tego samego modułu działa wykrywanie tłumu. Analizuje ono wzajemne odległości osób w kadrze i wyznacza liczność największego skupiska. Gdy osiąga ono zadaną wartość, informacja o tłumie również dołączana jest do wektora detekcji, umożliwiając reagowanie na nadmierne zagęszczenie osób.
+
+
+\subsection{System zarządzania wykrywanymi zachowaniami}
+\small \textit{Bartosz Piłat, Norbert Gwiazda}
+\subsubsection{Składowanie danych}
+W celu optymalizacji wydajnościowej oraz zapewnienia skalowalności systemu, zdecydowano się na wdrożenie hybrydowego modelu składowania danych, dzielącego zasoby na dane relacyjne oraz pliki wideo:
+
+\begin{itemize}
+    \item \textbf{Relacyjna baza danych (PostgreSQL)} - Odpowiada za przechowywanie ustrukturyzowanych metadanych. W bazie tej rejestrowane są kluczowe informacje dotyczące każdej sekwencji wideo, takie jak: dokładna data i znacznik czasowy zapisu, powiązanie z konkretnym szablonem detekcji, który zainicjował rejestrację, oraz bezwzględna ścieżka do plików źródłowych na dysku. Ponadto PostgreSQL przechowuje szczegóły o wszystkich wykrytych klasach obiektów wewnątrz danej sekwencji, wraz z przypisanymi im wewnętrznymi znacznikami czasu.
+    \item \textbf{Pamięć dyskowa} - Służy do bezpośredniego składowania surowych, zanonimizowanych fragmentów wideo. Nagrania są dzielone na kilkusekundowe fragmenty i zapisywane w strukturze katalogów zorganizowanych według dat. Nazwy poszczególnych plików wideo zawierają w sobie unikalne znaczniki czasowe określające dokładny moment ich rejestracji, co ułatwia ich bezpośrednią identyfikację na poziomie systemu operacyjnego, gdyby zaszła taka ewentualna potrzeba.
+\end{itemize}
+
+\subsubsection{Serwis zarządzający nagraniami}
+Serwis zarządzający nagraniami umożliwia sekwencyjny zapis kilkusekundowych fragmentów wideo. Architektura API umożliwia przekazywanie dowiązań do poprzednich rejestrów wideo lub zapis jako nagranie samodzielne, dzięki czemu poszczególne pliki automatycznie formują spójną logicznie listę jednokierunkową reprezentującą całe wykryte zdarzenie.
+
+Do funkcji serwisu należy zarządzanie cyklem życia nagrań, w tym operacje usuwania:
+\begin{itemize}
+    \item \textbf{Usuwanie pełnych sekwencji} - Powoduje kaskadowe wyczyszczenie wpisów w bazie danych oraz fizyczne usunięcie wszystkich powiązanych plików kilkusekundowych z dysku twardego.
+    \item \textbf{Usuwanie pojedynczych fragmentów (z naprawą struktury)} - W przypadku usunięcia wybranego ogniwa ze środka sekwencji, serwis uruchamia procedurę naprawczą. Algorytm modyfikuje wskaźniki w bazie danych tak, aby po usunięciu fragmentu naprawione zostało powiązanie reszty sekwencji. Zapobiega to fragmentacji danych i pozwala zachować ciągłość całej sekwencji, unikając niespójności w danych.
+\end{itemize}
+
+W celu optymalizacji interfejsu użytkownika, API udostępnia listę zapisanych sekwencji wraz z detalami detekcji w postaci stronnicowanej (ang. \textit{pagination}), co zapobiega przeciążeniu sieci przy dużych ilościach danych. Dodatkowo, podczas każdego uruchomienia serwisu, inicjowany jest proces weryfikacji integralności danych. System synchronizuje bazę z dyskiem: wpisy wskazujące na nieistniejące fizycznie pliki są usuwane z bazy danych PostgreSQL. W sytuacji odwrotnej, gdy plik wideo istnieje na dysku lecz brakuje jego reprezentacji w bazie, system generuje komunikat ostrzegawczy w logach serwisu, w celu poinformowania o niespójności.
+\subsubsection{Zarządzanie wykrytymi zachowaniami}
+Podsystem zarządzania zachowaniami dostarcza pełny zestaw operacji biznesowych (CRUD) powiązanych z szablonami detekcji. API umożliwia pobieranie, tworzenie, modyfikowanie oraz usuwanie szablów reguł, za pośrednictwem interfejsu webowego. 
+
+Każdy szablon charakteryzuje się unikalną, nadaną przez użytkownika nazwą identyfikacyjną oraz kolekcją tzw. wektorów detekcji. Wektory te określają kombinacje oraz progi ilościowe wykrytych obiektów lub zachowań (np. jednoczesna obecność określonej liczby osób w strefie zakazanej). Dopiero spełnienie warunków zdefiniowanych w jednym z wektorów danego szablonu uruchamia procedurę rejestracji incydentu. Ponadto, serwis udostępnia aktualną listę wszystkich natywnie obsługiwanych przez modele uczenia maszynowego klas obiektów oraz zachowań, co pozwala aplikacji klienckiej na walidację wprowadzanych przez użytkownika reguł.
+
+\subsubsection{Strumieniowanie fragmentów nagrań do interfejsu użytkownika}
+Proces transferu multimediów z serwisu Spring Boot do interfejsu użytkownika został zaprojektowany z myślą o minimalizacji opóźnień oraz oszczędności pasma sieciowego. System nie przesyła całych scalonych plików jednocześnie, lecz za pomocą strumieniowania częściowego (ang. \textit{Partial Content}) w oparciu o kod HTTP 206.
+
+Mechanizm ten ściśle współpracuje z zastosowanym protokołem DASH. Na podstawie metadanych i struktury listy jednokierunkowej konkretnej sekwencji, serwis generuje deskryptor strumienia. Przeglądarka internetowa użytkownika, odczytując te informacje, wysyła żądania o kolejne fragmenty wideo dokładnie wtedy, gdy są one potrzebne do podtrzymania bufora odtwarzacza. Dzięki takiemu rozwiązaniu, mimo fizycznego podziału materiału na dysku na małe elementy, użytkownik otrzymuje płynny obraz pozbawiony przerw, dający pełną iluzję interakcji z jednym, ciągłym nagraniem wideo.
+
+\subsection{Interfejs użytkownika}
+
+\small \textit{Norbert Gwiazda, Filip Kobus}
+\subsubsection{Eksplorator detekcji}
+Aby umożliwić użytkownikowi przeglądanie zapisanych detekcji, zaimplementowano komponent aplikacji webowej, obejmujący interaktywną listę nagrań razem z odtwarzaczem. Lista nagrań jest podzielona na strony, co nadaje jej czytelność. Użytkownik może zaznaczać nagrania, które chce skasować, a specjalnie przygotowany do tego przycisk wykonuje zapytanie po stronie backendu z listą nagrań do usunięcia. Umożliwione jest sortowanie oraz filtrowanie nagrań m.in po dacie wysłania.
+
+Odtwarzacz nagrań oparto o bibliotekę \texttt{Shaka-Player}, wspierającą protokół DASH oraz markery na osi czasu. Obszar odtwarzacza posiada opis nagrania, wykryte obiekty oraz zdarzenia. Te ostatnie są zaznaczane jako przedziały czasowe na osi czasu.
+\subsubsection{Ustawienia detekcji}
+Jest to funkcjonalność, zawierająca listę szablonów detekcji, które można modyfikować, usuwać lub też dodawać nowe. Tworzenie szablonu detekcji polega na wybraniu obiektu oraz jego konkretnej ilości lub zakresu ilościowego. Możliwe jest wiele obiektów na jeden szablon. Po utworzeniu szablonu, wysyłany jest on na serwer API, skąd dostęp do niego czerpie moduł detektora.
+\subsubsection{Ustawienia stref wykrywania}
+To druga funkcjonalność wewnątrz ustawień aplikacji. Użytkownik ma możliwość pobrania referencyjnego kadru z wybranej kamery, a następnie interaktywnego wyznaczenia obszarów (wielokątów), których naruszenie powinno generować alert detektora. Podobnie jak w przypadku szablonów detekcji, użytkownik ma do dyspozycji listę zaznaczonych obszarów, które może edytować, dodawać nowe czy usuwać stare.
+
+\section{Prezentacja funkcjonalności}
+% TU MAJA BYC SCREENY Z DZIALANIA APLIKACJI
+% KONIECZNIE CHCIAL ZEBY SCREENY PREZENTACYJNE DOTYCZYLY FEEDU Z KAMER
+% UCZELNIANYCH
+
+\subsection{System detekcji zachowań}
+\label{subsec:prezentacja_detekcji}
+% TU ZAPISAŁEM JAKIEŚ PRZYKŁADOWE PODPUNKTY ODE MNIE CO MOGLOBY SIE TU ZAWIERAC.
+% MOZECIE POZMIENIAC
+\subsubsection{Detekcja zachowań}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\textwidth]{images/interfejs_upadku.png}
+    \captionsetup{justification=centering}
+    \caption{Interfejs dla klipu zawierającego detekcję upadku}
+    \label{fig:interfejs_upadku}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\textwidth]{images/upadek.png}
+    \captionsetup{justification=centering}
+    \caption{Klatka z detekcji upadku}
+    \label{fig:upadek}
+\end{figure}
+
+Działanie modułu detekcji zachowań zaprezentowano na przykładzie wykrycia upadku. Rysunek~\ref{fig:upadek} przedstawia pojedynczą klatkę nagrania, na której system rozpoznał upadek osoby. Rysunek~\ref{fig:interfejs_upadku} pokazuje natomiast to samo zdarzenie z perspektywy interfejsu użytkownika: zarejestrowany klip wraz z opisem, listą wykrytych obiektów oraz oznaczeniem zdarzenia jako przedziału czasowego na osi czasu odtwarzacza.
+
+\subsubsection{Anonimizacja tożsamości}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\textwidth]{images/rozmycie_twarzy.png}
+    \captionsetup{justification=centering}
+    \caption{Klatka przedstawiająca zanonimizowane twarze}
+    \label{fig:rozmycie_twarzy}
+\end{figure}
+
+Rysunek~\ref{fig:rozmycie_twarzy} ilustruje efekt działania modułu anonimizacji wizerunku. Mimo że twarze wszystkich osób zwrócone są pod różnymi kątami do kamery, to wszystkie wizerunki zostają zanonimizowane przy jednoczesnym zachowaniu czytelności pozostałych elementów sceny. Jedna z osób pozostaje jednak zwrócona tyłem do kamery, ale obraz jej głowy poprawnie nie zostaje rozmyty.
+
+\subsubsection{Anonimizacja tablic rejestracyjnych}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\textwidth]{images/auto.png}
+    \captionsetup{justification=centering}
+    \caption{Klatka przedstawiająca zanonimizowaną tablicę rejestracyjną samochodu}
+    \label{fig:auto}
+\end{figure}
+
+Na rysunku~\ref{fig:auto} przedstawiono rezultat anonimizacji tablic rejestracyjnych. Obszar tablicy wykrytego pojazdu został zamazany, dzięki czemu odczytanie numeru rejestracyjnego, a tym samym identyfikacja pojazdu, nie jest możliwe. Pojawia się nadmiarowa anonimizacja inengo elementu samochodu, lecz nie wpływa ona negtywnie na inne cechy wizualne auta.
+
+\subsubsection{Wykrywanie naruszenia obszarów zakazanych}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{images/lewy_twix.png}
+        \captionsetup{justification=centering}
+        \caption{Strefa dla trawnika po lewej stronie}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth]{images/prawy_twix.png}
+        \captionsetup{justification=centering}
+        \caption{Strefa dla trawnika po prawej stronie}
+    \end{subfigure}
+    \captionsetup{justification=centering}
+    \caption{Wybrane strefy wykluczenia}
+    \label{fig:strefy_wykluczone}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\textwidth]{images/trawnik_timeline.png}
+    \captionsetup{justification=centering}
+    \caption{Interfejs dla klipu zawierającego wejście w strefy wykluczone}
+    \label{fig:trawnik_timeline}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\textwidth]{images/trawnik.png}
+    \captionsetup{justification=centering}
+    \caption{Klatka przedstawiająca wejście na dwa obszary wykluczone}
+    \label{fig:trawnik}
+\end{figure}
+
+Działanie modułu zaprezentowano na przykładzie dwóch stref wykluczonych, wyznaczonych na trawnikach po lewej i prawej stronie kadru (rysunek~\ref{fig:strefy_wykluczone}). Wejście osoby w którykolwiek z tych obszarów wyzwala rejestrację zdarzenia. Rysunek~\ref{fig:trawnik} przedstawia klatkę z momentu naruszenia obu stref jednocześnie, natomiast rysunek~\ref{fig:trawnik_timeline} -- odpowiadający temu zdarzeniu widok w interfejsie użytkownika, z naruszeniem zaznaczonym jako przedział na osi czasu.
+
+
+\subsection{System zarządzania wykrywanymi zachowaniami}
+
+Interfejs zarządzania umożliwia operatorowi definiowanie reguł detekcji oraz porządkowanie zarejestrowanego materiału.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\textwidth]{images/interfejs.png}
+    \captionsetup{justification=centering}
+    \caption{Przykładowy widok interfejs dla kilku wektorów wykryć}
+    \label{fig:interfejs}
+\end{figure}
+
+Rysunek~\ref{fig:interfejs} przedstawia ogólny widok panelu wraz z listą zdefiniowanych wektorów detekcji.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\textwidth]{images/usuwanie.png}
+    \captionsetup{justification=centering}
+    \caption{Usuwanie nagrań}
+    \label{fig:usuwanie}
+\end{figure}
+
+Interfejs umożliwia zarządzanie cyklem życia nagrań. Rysunek~\ref{fig:usuwanie} przedstawia widok usuwania zarejestrowanych klipów, w którym operator zaznacza materiał przeznaczony do skasowania.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\textwidth]{images/wektory_wykryc.png}
+    \captionsetup{justification=centering}
+    \caption{Przykładowe wektory wykryć}
+    \label{fig:wektory_wykryc}
+\end{figure}
+
+Pojedynczy wektor detekcji określa wymaganą kombinację obiektów lub zachowań wraz z ich liczbą. Przykładowy zestaw zdefiniowanych wektorów przedstawiono na rysunku~\ref{fig:wektory_wykryc}.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.85\textwidth}
+        \includegraphics[width=\textwidth]{images/wektor_podrozni.png}
+        \captionsetup{justification=centering}
+        \caption{Przykładowe tworzenie wektora dla podróżnych}
+        \vspace{1em}
+    \end{subfigure}
+    
+    \begin{subfigure}{0.85\textwidth}
+        \includegraphics[width=\textwidth]{images/wektor_pies.png}
+        \captionsetup{justification=centering}
+        \caption{Przykładowe tworzenie wektora dla osoby z psem}
+    \end{subfigure}
+    \captionsetup{justification=centering}
+    \caption{Tworzenie przykładowych wektorów detekcji}
+    \label{fig:nowe_wektory_przyklady}
+\end{figure}
+
+Tworzenie nowego wektora polega na wyborze obiektów oraz określeniu ich liczby lub zakresu ilościowego. Rysunek~\ref{fig:nowe_wektory_przyklady} ilustruje ten proces na dwóch przykładach: wektorze reagującym na grupę podróżnych oraz wektorze opisującym osobę z psem.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.96\textwidth]{images/obszary_wykluczone.png}
+    \captionsetup{justification=centering}
+    \caption{Zapisane obszary wykluczone}
+    \label{fig:obszary_wykluczone_zapisane}
+\end{figure}
+
+Oprócz reguł opartych na obiektach i zachowaniach operator zarządza również strefami wykluczonymi. Rysunek~\ref{fig:obszary_wykluczone_zapisane} przedstawia listę zapisanych obszarów -- w tym te same dwie strefy wyznaczone na trawnikach, których naruszenie zaprezentowano w podsekcji~\ref{subsec:prezentacja_detekcji} (rysunek~\ref{fig:strefy_wykluczone}).
+
+
+
+
+% TO DO
+% Jednym z pomysłów jakie miałem które można tu opisać jest przekształcenie anonimizacji, aby nagrania były zapisywane w niezanonimizowanej formie, a dopiero przy wysyłaniu do wyświetlenia w interfejsie były anonimizowane. Ewentualnie przeprowadzanie podwójnego zapisu, gdzie jedna baza nagrań przetrzymuje nagrania zanonimizowane, które są wysyłane do frontendu do wyświetlenia i druga baza do której dostęp jest jedynie lokalny, przeznaczona do udostępnienia nagrań tylko w specialnych przypadkach, kiedy trzeba np. zidentyfikować sprawcę. W ten sposób nie trzebaby się martwić ewentualnym wyciekiem danych.
+
+\printbibliography
