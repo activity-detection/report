@@ -2,7 +2,7 @@ name: Compile LaTeX document
 
 on:
   push:
-    branches: [ main, test-ci ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -25,4 +25,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Raport-Zespolowy-PDF
-          path: main.pdf
+          path: build/main.pdf
