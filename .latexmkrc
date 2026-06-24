@@ -23,5 +23,7 @@ $show_time = 1;
 # Maksymalna liczba powtórzeń kompilacji (w celu rozwiązania referencji)
 $max_repeat = 5;
 
+$jobname = 'report';
+
 # Dodatkowe rozszerzenia do czyszczenia przy komendzie latexmk -c
 push @generated_exts, 'loe', 'lol', 'run.xml';
