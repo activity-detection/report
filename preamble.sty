@@ -18,7 +18,11 @@
 \DeclareTextFontCommand{\textsb}{\semiboldfont}
 
 % UWAGA: Jeśli nadal będzie błąd, upewnij się, że plik nazywa się STIXTwoMath.otf w systemie
-\setmathfont{STIXTwoMath.otf} 
+%\setmathfont{STIXTwoMath.otf} 
+\setmathfont{Latin Modern Math}[
+    Scale = MatchLowercase,
+    StylisticSet = 1
+]
 
 % ==========================================
 % 2. Typografia i Geometria Obrazu
