@@ -30,4 +30,4 @@ jobs:
           body: "Automatic build of the latest report version."
           allowUpdates: true
           removeArtifacts: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_TOKEN }}
