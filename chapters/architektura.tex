@@ -1,1 +1,62 @@
-% Bardzo ogólnie.
+\chapter{Architektura systemu}
+
+\begin{figure}[H]
+    \centering
+    \makeatletter
+    \tikzset{
+        database/.style={
+            path picture={
+                % Usunięto fill – teraz kształt jest przezroczysty, a linie są thick
+                \draw[thick] (0, 1.5*\database@segmentheight) circle [x radius=\database@radius,y radius=\database@aspectratio*\database@radius];
+                \draw[thick] (-\database@radius, 0.5*\database@segmentheight) arc [start angle=180,end angle=360,x radius=\database@radius, y radius=\database@aspectratio*\database@radius];
+                \draw[thick] (-\database@radius,-0.5*\database@segmentheight) arc [start angle=180,end angle=360,x radius=\database@radius, y radius=\database@aspectratio*\database@radius];
+                \draw[thick] (-\database@radius,1.5*\database@segmentheight) -- ++(0,-3*\database@segmentheight) arc [start angle=180,end angle=360,x radius=\database@radius, y radius=\database@aspectratio*\database@radius] -- ++(0,3*\database@segmentheight);
+            },
+            minimum width=2*\database@radius + \pgflinewidth,
+            minimum height=3*\database@segmentheight + 2*\database@aspectratio*\database@radius + \pgflinewidth,
+        },
+        database segment height/.store in=\database@segmentheight,
+        database radius/.store in=\database@radius,
+        database aspect ratio/.store in=\database@aspectratio,
+        database segment height=0.4cm,
+        database radius=1.1cm,
+        database aspect ratio=0.25,
+        service/.style={rectangle, rounded corners=6pt, minimum width=3cm, minimum height=1.5cm, text centered, draw=blue!60!black, fill=blue!5, thick, align=center},
+        flow/.style={thick, ->, >=stealth, draw=black!70}
+    }
+    \makeatother
+
+    \begin{tikzpicture}[node distance=3.0cm and 2.0cm, font=\sffamily]
+        
+        % --- Definicje komponentów ---
+        \node (nginx) [service] {\textbf{Nginx} \\ \small Proxy / Router};
+        
+        \node (frontend) [service, right=of nginx] {\textbf{Frontend} \\ \small Next.js};
+        
+        \node (backend) [service, below=of nginx, yshift=-0.3cm] {\textbf{Backend} \\ \small Spring Boot};
+        
+        \node (detector) [service, left=of backend] {\textbf{Detector} \\ \small Python Services};
+        
+        % Dodano align=center wewnątrz opcji label
+        \node (db) [database, below=of backend, yshift=-0.5cm, label={[align=center, yshift=-0.1cm]below:\textbf{PostgreSQL}}] {};
+
+        % --- Przepływ danych ---
+        \draw [flow] (nginx.east) -- (frontend.west);
+        \draw [flow] (nginx.south) -- (backend.north);
+        \draw [flow] (frontend.south) |- (backend.east);
+        \draw [flow] (detector.east) -- (backend.west);
+        \draw [flow, <->] (backend.south) -- (db.north);
+
+    \end{tikzpicture}
+    \caption{Architektura systemu.}
+    \label{fig:architektura_systemu}
+\end{figure}
+
+Przedstawiona na \myref[rysunku]{fig:architektura_systemu} architektura systemu opiera się o następujące kontenery dockera:
+\begin{itemize}
+\item \textbf{Nginx} - pełni rolę reverse proxy, kierując ruch do odpowiednich usług w zależności od ścieżki URL. Umożliwia wdrożenie certyfikatu SSL i komunikację poprzez protokół HTTPS.
+\item \textbf{Frontend} - aplikacja webowa zbudowana w Next.js, odpowiedzialna za interfejs użytkownika, wizualizację danych oraz interakcję z backendem.
+\item \textbf{Backend} - serwis napisany w Spring Boot, który obsługuje logikę biznesową, zarządza komunikacją z bazą danych oraz integruje się z modułem detekcji.
+\item \textbf{Detector} - moduł detekcji zachowań osób, napisany w Pythonie, który przetwarza strumienie wideo w czasie rzeczywistym, analizuje je pod kątem wykrywania określonych obiektów i zachowań oraz generuje zdarzenia do dalszego przetwarzania.
+\item \textbf{PostgreSQL} - relacyjna baza danych przechowująca informacje o zdarzeniach, konfiguracjach systemu oraz metadanych związanych z nagraniami wideo.
+\end{itemize}

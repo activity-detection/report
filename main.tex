@@ -6,9 +6,9 @@
 }
 
 \documentclass[
-    fontsize=11pt,
+    fontsize=12pt,
     paper=a4,
-    twoside=false,              % Jednostronny (częsty wymóg dla prac dyplomowych/raportów)
+    oneside,              % Jednostronny
     titlepage=true,             % Strona tytułowa jako osobna strona
     headinclude=true,           % Włączenie nagłówka do obliczeń marginesów
     footinclude=false,          % Wyłączenie stopki z obliczeń marginesów
@@ -23,6 +23,10 @@
 ]{scrreprt}
 
 \usepackage{preamble}
+
+\newcommand{\myref}[2][rysunku]{%
+    \hyperref[#2]{\textsb{#1~\ref{#2}}}%
+}
 
 \titlehead{
     \begin{center}
@@ -62,16 +66,16 @@ Moduł detekcji zaimplementowano w języku Python z wykorzystaniem modeli uczeni
 Testy systemu przeprowadzono na nagraniach symulujących docelowe otoczenie kampusu uczelni. Poczynione obserwacje wykazały skuteczność potokowej architektury danych oraz zdefiniowały kierunek dalszego rozwoju projektu w stronę implementacji przetwarzania równoległego dla jednoczesnej obsługi wielu kamer.
 \end{abstract}
 
-\cleardoublepage
+\clearpage
 \tableofcontents                
-\cleardoublepage
+\clearpage
 
 
 \include{chapters/wstep}
 
 \include{chapters/architektura}
-
 \include{chapters/detektor}
+
 \include{chapters/backend}
 \include{chapters/frontend}
 

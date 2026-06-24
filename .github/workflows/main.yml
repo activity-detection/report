@@ -20,13 +20,16 @@ jobs:
           root_file: main.tex
           compiler: latexmk
           args: -interaction=nonstopmode -halt-on-error
+      
+      - name: Rename PDF
+        run: mv build/main.pdf build/report.pdf
 
       - name: Update GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: "build/main.pdf"
+          artifacts: "build/report.pdf"
           tag: "latest"
-          name: "Latest report version"
+          name: "Report PDF"
           body: "Automatic build of the latest report version."
           allowUpdates: true
           removeArtifacts: true

@@ -4,38 +4,56 @@
 % ==========================================
 % 1. Czcionki i Język (Silnik LuaLaTeX)
 % ==========================================
-
 \usepackage{fontspec}
 \usepackage[polish]{babel}
 \usepackage[autostyle=true]{csquotes}
-
-% Współczesne pakiety matematyczne dla LuaLaTeX zamiast amsmath/amsfonts
 \usepackage{unicode-math} 
-\setmainfont{Latin Modern Roman}
-\setmathfont{Latin Modern Math}
+
+\setmainfont{Libertinus Serif}[
+    UprightFont = *-Regular,
+    BoldFont = *-Bold,
+    ItalicFont = *-Italic
+]
+\newfontfamily\semiboldfont{Libertinus Serif-Semibold}
+\DeclareTextFontCommand{\textsb}{\semiboldfont}
+
+% UWAGA: Jeśli nadal będzie błąd, upewnij się, że plik nazywa się STIXTwoMath.otf w systemie
+\setmathfont{STIXTwoMath.otf} 
 
 % ==========================================
 % 2. Typografia i Geometria Obrazu
 % ==========================================
 \usepackage{microtype} 
 \usepackage{setspace}
-\onehalfspacing % Zgodne z wytycznymi PW (1.5 interlinii)
+\onehalfspacing
+\raggedbottom
 
-% KOMA-Script naturalnie zarządza marginesami (typearea), ale jeśli 
-% wydział sztywno wymaga 2.6cm z każdej strony, odkomentuj poniższą linię:
-% \usepackage[a4paper, margin=2.6cm, headsepline=0.4pt]{geometry}
+\clubpenalty=10000        
+\widowpenalty=10000       
+\displaywidowpenalty=10000
+\brokenpenalty=10000     
 
-\raggedbottom % Zapobiega brzydkiemu rozciąganiu pionowemu tekstu przez LaTeX
+\interlinepenalty=5000   
+\predisplaypenalty=10000
+
+\usepackage[shortcuts]{extdash}
+
+\usepackage{enumitem}
+\setlist{
+    nosep,               % Usuwa odstępy między punktami (bardzo czytelne)
+    itemsep=2pt,         % Dodaje minimalny, bezpieczny odstęp
+    beginpenalty=10000,  % Blokuje sieroty przed listą
+    midpenalty=500       % Pozwala na łamanie w środku listy
+}
 
 % ==========================================
 % 3. Kolory i Stylistyka KOMA-Script
 % ==========================================
 \usepackage{xcolor}
-\definecolor{pwblue}{RGB}{0, 101, 169}   % Reprezentacyjny błękit PW
+\definecolor{pwblue}{RGB}{0, 101, 169} 
 \definecolor{darkgray}{RGB}{50, 50, 50}
 \definecolor{codebackground}{RGB}{245, 245, 245}
 
-% Globalne zarządzanie krojami pisma (KOMA-Script native)
 \AtBeginDocument{%
     \addtokomafont{disposition}{\color{pwblue}\sffamily\bfseries}
     \addtokomafont{chapter}{\LARGE}
@@ -47,37 +65,40 @@
 }
 
 % ==========================================
-% 4. Nagłówki i Stopki (scrlayer-scrpage)
+% 4. Nagłówki, Stopki i Linki (Kolejność krytyczna!)
 % ==========================================
 \usepackage[automark, headsepline=0.4pt]{scrlayer-scrpage}
+\usepackage{hyperref}
+\usepackage[nameinlink]{cleveref} % MUSI być po hyperref
+\usepackage{url}
+
 \clearpairofpagestyles
-\ihead{\headmark}  % Tytuł rozdziału po wewnętrznej/lewej
-\ohead{\pagemark}  % Numer strony po zewnętrznej/prawej
+\ihead{\headmark}
+\ohead{\pagemark}
 \setkomafont{pageheadfoot}{\sffamily\footnotesize}
 \setkomafont{pagenumber}{\sffamily\small\bfseries}
 
+\hypersetup{
+    colorlinks=true,
+    allcolors=black,
+    pdfborder={0 0 0},
+    pdfpagemode=UseNone,
+    pdfstartview=FitH
+}
+
 % ==========================================
-% 5. Grafika, Wykresy (Przywrócone ze starej)
+% 5. Grafika, Listingi i Bibliografia
 % ==========================================
 \usepackage{graphicx}
 \usepackage{float}
-\usepackage{svg} % Potrzebne, jeśli wstawiasz rysunki .svg
+\usepackage{svg}
 \usepackage{caption}
 \usepackage{subcaption}
+\captionsetup{font=small, labelfont={bf,color=pwblue}, margin=10pt}
 
-\captionsetup{
-    font=small,
-    labelfont={bf,color=pwblue}, % Niebieskie i pogrubione podpisy "Rysunek 1.1"
-    margin=10pt
-}
-
-% TikZ - zaawansowana grafika wektorowa
 \usepackage{tikz}
-\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit, backgrounds}
 
-% ==========================================
-% 6. Kody źródłowe (Listingi)
-% ==========================================
 \usepackage{listings}
 \lstset{
     backgroundcolor=\color{codebackground},
@@ -90,27 +111,7 @@
     commentstyle=\color{gray}
 }
 
-% ==========================================
-% 7. Linki, Bibliografia i Cleveref
-% ==========================================
-\usepackage{hyperref}
-\hypersetup{
-    colorlinks=true,
-    allcolors=black
-}
-\usepackage[nameinlink]{cleveref}
-\usepackage{url}
-
 \usepackage[backend=biber, style=numeric, maxcitenames=1, mincitenames=1, sorting=none]{biblatex}
 \addbibresource{biblio.bib}
-
-% ==========================================
-% 8. Konfiguracja Nazewnictwa i Odmian (cleveref)
-% ==========================================
-% Zamiast starego i błędnego \addto\captionspolish (które psuło bibliografię w biblatex),
-% używamy natywnego mechanizmu językowego z cleveref:
-
-\DeclareBibliographyCategory{materiały} % Czyste zarządzanie źródłami
-
 
 \endinput
