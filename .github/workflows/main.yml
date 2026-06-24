@@ -21,8 +21,13 @@ jobs:
           compiler: latexmk
           args: -interaction=nonstopmode -halt-on-error
 
-      - name: Upload PDF artifact
-        uses: actions/upload-artifact@v4
+      - name: Update GitHub Release
+        uses: ncipollo/release-action@v1
         with:
-          name: Raport-Zespolowy-PDF
-          path: build/main.pdf
+          artifacts: "build/main.pdf"
+          tag: "latest"
+          name: "Latest report version"
+          body: "Automatic build of the latest report version."
+          allowUpdates: true
+          removeArtifacts: true
+          token: ${{ secrets.GITHUB_TOKEN }}
