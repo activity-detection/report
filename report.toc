@@ -1,0 +1,21 @@
+\babel@toc {polish}{}\relax 
+\contentsline {chapter}{\numberline {1}Wstęp}{5}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Wprowadzenie do tematyki}{5}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Analiza problematyki}{6}{section.1.2}%
+\contentsline {chapter}{\numberline {2}Architektura systemu}{7}{chapter.2}%
+\contentsline {section}{\numberline {2.1}System zarządzania wykrywanymi zachowaniami}{9}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Skrócony opis}{9}{subsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.1.2}Infrastruktura projektowa}{9}{subsection.2.1.2}%
+\contentsline {subsubsection}{\nonumberline Model składowania danych}{9}{subsubsection*.4}%
+\contentsline {subsubsection}{\nonumberline Architektura potoku zapisu i mapowania danych}{10}{subsubsection*.7}%
+\contentsline {subsection}{\numberline {2.1.3}Opis funkcjonalności}{12}{subsection.2.1.3}%
+\contentsline {subsubsection}{\nonumberline Logika sekwencjonowania nagrań wideo}{12}{subsubsection*.10}%
+\contentsline {subsubsection}{\nonumberline Mechanizm naprawy powiązań sekwencji}{13}{subsubsection*.13}%
+\contentsline {subsubsection}{\nonumberline Serwis synchronizujący mapowania danych}{14}{subsubsection*.15}%
+\contentsline {subsubsection}{\nonumberline Zarządzanie szablonami detekcji}{15}{subsubsection*.17}%
+\contentsline {subsubsection}{\nonumberline Rejestracja i zapis nagrań detekcji}{15}{subsubsection*.19}%
+\contentsline {subsubsection}{\nonumberline Strumieniowanie multimediów przy użyciu protokołu DASH}{17}{subsubsection*.22}%
+\contentsline {chapter}{\numberline {3}Podsumowanie}{19}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Dalsze możliwości rozwoju}{19}{section.3.1}%
+\contentsline {chapter}{\nonumberline Bibliografia}{20}{chapter*.24}%
+\providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 
