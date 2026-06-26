@@ -48,15 +48,14 @@
         \draw [flow, <->] (backend.south) -- (db.north);
 
     \end{tikzpicture}
-    \caption{Architektura systemu.}
-    \label{fig:architektura_systemu}
+    \caption{Architektura systemu.}\label{fig:architektura_systemu}
 \end{figure}
 
 Przedstawiona na \myref[rysunku]{fig:architektura_systemu} architektura systemu opiera się o następujące kontenery dockera:
 \begin{itemize}
-\item \textbf{Nginx} - pełni rolę reverse proxy, kierując ruch do odpowiednich usług w zależności od ścieżki URL. Umożliwia wdrożenie certyfikatu SSL i komunikację poprzez protokół HTTPS.
-\item \textbf{Frontend} - aplikacja webowa zbudowana w Next.js, odpowiedzialna za interfejs użytkownika, wizualizację danych oraz interakcję z backendem.
-\item \textbf{Backend} - serwis napisany w Spring Boot, który obsługuje logikę biznesową, zarządza komunikacją z bazą danych oraz integruje się z modułem detekcji.
-\item \textbf{Detector} - moduł detekcji zachowań osób, napisany w Pythonie, który przetwarza strumienie wideo w czasie rzeczywistym, analizuje je pod kątem wykrywania określonych obiektów i zachowań oraz generuje zdarzenia do dalszego przetwarzania.
-\item \textbf{PostgreSQL} - relacyjna baza danych przechowująca informacje o zdarzeniach, konfiguracjach systemu oraz metadanych związanych z nagraniami wideo.
+\item \textbf{Nginx} --- odgrywa rolę odwróconego proxy, kierując ruch do odpowiednich usług w zależności od ścieżki \texttt{URL}.\ Umożliwia wdrożenie certyfikatu \texttt{SSL} i komunikację poprzez protokół \texttt{HTTPS}.
+\item \textbf{Frontend} --- aplikacja webowa zbudowana w \texttt{Next.js}, odpowiedzialna za interfejs użytkownika, wizualizację danych oraz interakcję z modułem backend.
+\item \textbf{Backend} --- serwis napisany w Spring Boot, który obsługuje logikę biznesową, zarządza komunikacją z bazą danych oraz integruje się z modułem detekcji.
+\item \textbf{Detector} --- moduł detekcji zachowań osób, napisany w Pythonie, który przetwarza strumienie wideo w czasie rzeczywistym, analizuje je pod kątem wykrywania określonych obiektów i zachowań oraz generuje zdarzenia do dalszego przetwarzania.
+\item \textbf{PostgreSQL} --- relacyjna baza danych przechowująca informacje o zdarzeniach, konfiguracjach systemu oraz metadanych związanych z nagraniami wideo.
 \end{itemize}
