@@ -58,3 +58,9 @@ Przedstawiona na \myref[rysunku]{fig:architektura_systemu} architektura systemu 
 \item \textbf{Detektor} --- moduł detekcji zachowań osób, napisany w Pythonie, który przetwarza strumienie wideo w czasie rzeczywistym, analizuje je pod kątem wykrywania określonych obiektów i zachowań oraz generuje zdarzenia do dalszego przetwarzania.
 \item \textbf{PostgreSQL} --- relacyjna baza danych przechowująca informacje o zdarzeniach, konfiguracjach systemu oraz metadanych związanych z nagraniami wideo.
 \end{itemize}
+
+Kod źródłowy projektu został udostępniony w repozytorium \texttt{GitHub}: 
+\begin{quote}
+    \href{https://github.com/activity-detection/application}{\texttt{activity-detection/application}}
+\end{quote}
+Organizacja \texttt{acitivity-detection} zawiera osobne repozytoria na każdy z modułów systemu, jednak wraz z rozwojem projektu zdecydowano się przenieść je do jednego repozytorium. O ile wspólne repozytorium jest optymalnym rozwiązaniem, o tyle \texttt{github subtree} pozwala na dalsze utrzymywanie modułów w osobnych repozytoriach lub cykliczną ich synchronizację z repozytorium nadrzędnym.
