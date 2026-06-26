@@ -6,7 +6,6 @@
     \tikzset{
         database/.style={
             path picture={
-                % Usunięto fill – teraz kształt jest przezroczysty, a linie są thick
                 \draw[thick] (0, 1.5*\database@segmentheight) circle [x radius=\database@radius,y radius=\database@aspectratio*\database@radius];
                 \draw[thick] (-\database@radius, 0.5*\database@segmentheight) arc [start angle=180,end angle=360,x radius=\database@radius, y radius=\database@aspectratio*\database@radius];
                 \draw[thick] (-\database@radius,-0.5*\database@segmentheight) arc [start angle=180,end angle=360,x radius=\database@radius, y radius=\database@aspectratio*\database@radius];
@@ -31,11 +30,11 @@
         % --- Definicje komponentów ---
         \node (nginx) [service] {\textbf{Nginx} \\ \small Proxy / Router};
         
-        \node (frontend) [service, right=of nginx] {\textbf{Frontend} \\ \small Next.js};
+        \node (frontend) [service, right=of nginx] {\textbf{Frontend} \\ \small \texttt{Next.js}};
         
-        \node (backend) [service, below=of nginx, yshift=-0.3cm] {\textbf{Backend} \\ \small Spring Boot};
+        \node (backend) [service, below=of nginx, yshift=-0.3cm] {\textbf{Backend} \\ \small \texttt{Spring Boot}};
         
-        \node (detector) [service, left=of backend] {\textbf{Detector} \\ \small Python Services};
+        \node (detector) [service, left=of backend] {\textbf{Detektor} \\ \small \texttt{Python Services}};
         
         % Dodano align=center wewnątrz opcji label
         \node (db) [database, below=of backend, yshift=-0.5cm, label={[align=center, yshift=-0.1cm]below:\textbf{PostgreSQL}}] {};
@@ -51,11 +50,11 @@
     \caption{Architektura systemu.}\label{fig:architektura_systemu}
 \end{figure}
 
-Przedstawiona na \myref[rysunku]{fig:architektura_systemu} architektura systemu opiera się o następujące kontenery dockera:
+Przedstawiona na \myref[rysunku]{fig:architektura_systemu} architektura systemu opiera się o następujące kontenery \texttt{Dockera}: 
 \begin{itemize}
 \item \textbf{Nginx} --- odgrywa rolę odwróconego proxy, kierując ruch do odpowiednich usług w zależności od ścieżki \texttt{URL}.\ Umożliwia wdrożenie certyfikatu \texttt{SSL} i komunikację poprzez protokół \texttt{HTTPS}.
 \item \textbf{Frontend} --- aplikacja webowa zbudowana w \texttt{Next.js}, odpowiedzialna za interfejs użytkownika, wizualizację danych oraz interakcję z modułem backend.
-\item \textbf{Backend} --- serwis napisany w Spring Boot, który obsługuje logikę biznesową, zarządza komunikacją z bazą danych oraz integruje się z modułem detekcji.
-\item \textbf{Detector} --- moduł detekcji zachowań osób, napisany w Pythonie, który przetwarza strumienie wideo w czasie rzeczywistym, analizuje je pod kątem wykrywania określonych obiektów i zachowań oraz generuje zdarzenia do dalszego przetwarzania.
+\item \textbf{Backend} --- serwis napisany w \texttt{Spring Boot}, który obsługuje logikę biznesową, zarządza komunikacją z bazą danych oraz integruje się z modułem detekcji.
+\item \textbf{Detektor} --- moduł detekcji zachowań osób, napisany w Pythonie, który przetwarza strumienie wideo w czasie rzeczywistym, analizuje je pod kątem wykrywania określonych obiektów i zachowań oraz generuje zdarzenia do dalszego przetwarzania.
 \item \textbf{PostgreSQL} --- relacyjna baza danych przechowująca informacje o zdarzeniach, konfiguracjach systemu oraz metadanych związanych z nagraniami wideo.
 \end{itemize}

@@ -18,7 +18,7 @@ W celu zagwarantowania optymalnej wydajności i uniknięcia opóźnień podczas
 zapisu dużych plików, w infrastrukturze projektowej zaimplementowano hybrydowy model 
 składowania danych. Do składowania różnych rodzajów danych zostały wykorzystane:
 \begin{itemize}
-    \item \textbf{Relacyjna baza danych (PostgreSQL)} --- Odpowiada za składowanie ustrukturyzowanych danych mapowań przechowywanych nagrań oraz szablonów detekcji. W bazie danych przechowywane są również przekazywane przy zapisie nagrań wykrytych w nich elementów, z odpowiednimi znacznikami czasowymi.
+    \item \textbf{Relacyjna baza danych (\texttt{PostgreSQL})} --- Odpowiada za składowanie ustrukturyzowanych danych mapowań przechowywanych nagrań oraz szablonów detekcji. W bazie danych przechowywane są również przekazywane przy zapisie nagrań wykrytych w nich elementów, z odpowiednimi znacznikami czasowymi.
     \item \textbf{Lokalny system plików (Pamięć dyskowa)} --- Stanowi fizyczny magazyn dla zapisywanych nagrań. Dane na dysku kategoryzowane wewnątrz struktury katalogów, których nazwy odpowiadają dacie rejestracji, a poszczególne pliki wideo posiadają w nazwie precyzyjny znacznik czasu ich zapisu, co umożliwia administratorom i operatorom, ich ręczną lokalizację bezpośrednio z poziomu systemu operacyjnego, gdyby zaszła taka potrzeba.
 \end{itemize}
 
@@ -93,7 +93,7 @@ generowanej w ramach zapisywanych mapowań do bazy danych. Jako ważne elementy 
     \item \textbf{referenced\_video\_id} --- Każdy kolejny fragment przechowuje identyfikator swojego bezpośredniego poprzednika. Ten element bezpośrednio odpowiada za strukturę listy jednokierunkowej.
     %\item 
 \end{itemize}
-Zastosowanie wspólnego \texttt{origin\_id} eliminuje konieczność iteracyjnego, kosztownego przeszukiwania bazy „element po elemencie” podczas odczytu, kierując się jedynie dowiązaniami z \texttt{referenced\_video\_id}, przy wyszukiwaniu sekwencji. Zamiast tego system jednym zapytaniem SQL pobiera wszystkie rekordy o danym \texttt{origin\_id}, a dopiero następnie w pamięci RAM układane są one w prawidłowej kolejności przy wykorzystaniu \texttt{referenced\_video\_id}, przygotowując do wyświetlenia.
+Zastosowanie wspólnego \texttt{origin\_id} eliminuje konieczność iteracyjnego, kosztownego przeszukiwania bazy „element po elemencie” podczas odczytu, kierując się jedynie dowiązaniami z \texttt{referenced\_video\_id}, przy wyszukiwaniu sekwencji. Zamiast tego system jednym zapytaniem \texttt{SQL} pobiera wszystkie rekordy o danym \texttt{origin\_id}, a dopiero następnie w pamięci \texttt{RAM} układane są one w prawidłowej kolejności przy wykorzystaniu \texttt{referenced\_video\_id}, przygotowując do wyświetlenia.
 
 \begin{figure}[H]
     \centering
@@ -102,7 +102,7 @@ Zastosowanie wspólnego \texttt{origin\_id} eliminuje konieczność iteracyjnego
 \end{figure}
 
 \subsection{Mechanizm naprawy powiązań sekwencji}
-System, poza usuwaniem całych sekwencji, pozwala z poziomu API na kasowanie pojedynczych, 
+System, poza usuwaniem całych sekwencji, pozwala z poziomu \texttt{API} na kasowanie pojedynczych, 
 wybranych fragmentów z sekwencji danego zdarzenia. Rodzi to jednak ryzyko przerwania spójności 
 referencyjnej i możliwości „osierocenia” pozostałych elementów sekwencji, co uniemożliwiłoby 
 poprawne odtwarzanie filmu detekcji. W tym celu zaimplementowano mechanizm naprawy powiązań między 
@@ -124,7 +124,7 @@ Usługa ta reaguje w trzech sytuacjach:
 \end{itemize}
 
 \subsection{Zarządzanie szablonami detekcji}
-Podsystem udostępnia pełną funkcjonalność zarządzania szablonami reguł za pośrednictwem API 
+Podsystem udostępnia pełną funkcjonalność zarządzania szablonami reguł za pośrednictwem \texttt{API} 
 i powiązanego interfejsu webowego operatora. Użytkownik ma możliwość tworzenia, edycji, pobierania 
 oraz usuwania konfiguracji szablonów. Każdy szablon ma unikalną nazwę oraz tablicę 
 tzw.\ wektorów detekcji. Wektory definiują kombinacje oraz progi liczbowe obiektów 
@@ -135,7 +135,7 @@ zapisywaniu błędnych reguł.
 
 \subsection{Rejestracja i zapis nagrań detekcji}
 Zapis fragmentów wideo oraz powiązanych z nimi opisów wykrytych elementów, otrzymanych 
-bezpośrednio z modułu detektora, odbywa się za pośrednictwem punktu końcowego REST API.\
+bezpośrednio z modułu detektora, odbywa się za pośrednictwem punktu końcowego \texttt{REST API}.\
 Ze względu na konieczność jednoczesnego przesyłania binarnego pliku multimedialnego (wideo) 
 oraz ustrukturyzowanych danych tekstowych, żądanie to jest realizowane w formacie 
 \texttt{multipart/form-data}. Format ten pozwala na niezależne przekazywanie różnych typów 
@@ -166,7 +166,7 @@ W strukturze przesyłanego zapytania z modułu detekcji zawarte są następując
     \caption{Przykładowe zapytanie zapisu detekcji.}
 \end{figure}
 
-\subsection{Strumieniowanie multimediów przy użyciu protokołu DASH}
+\subsection{Strumieniowanie multimediów przy użyciu protokołu \texttt{DASH}}
 Ostatnią kluczową funkcjonalnością jest dostarczanie wideo do interfejsu użytkownika obsługujące 
 podzielone na fragmenty nagrania detekcji. System wykorzystuje do tego standard \texttt{DASH} 
 (\textit{Dynamic Adaptive Streaming over HTTP}), opierając przesył danych o mechanizm częściowej 
@@ -174,7 +174,7 @@ zawartości (\textit{Partial Content}) przy wykorzystaniu kodu odpowiedzi \textt
 
 Na bazie logicznie ułożonej sekwencji, serwis generuje w locie manifest \texttt{XML} z rozszerzeniem 
 \texttt{.mpd} (\textit{Media Presentation Description}). Dokument ten informuje odtwarzacz 
-przeglądarki o osadzeniu czasowym poszczególnych fragmentów oraz adresach URL, 
+przeglądarki o osadzeniu czasowym poszczególnych fragmentów oraz adresach \texttt{URL}, 
 pod którymi można je pobrać. Przeglądarka sekwencyjnie pobiera wyłącznie te fragmenty, 
 które są niezbędne do zapełnienia bieżącego bufora odtwarzacza. 
 Dla operatora korzystającego z interfejsu proces ten jest całkowicie niewidoczny. Pomimo 
