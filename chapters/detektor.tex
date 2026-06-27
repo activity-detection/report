@@ -1,0 +1,152 @@
+\chapter{System detekcji zachowań w czasie rzeczywistym}
+\label{cha:detektor}
+
+Komponent detekcji zachowań stanowi główną warstwę analityczną wytworzonego systemu monitoringu wizyjnego. Jest to aplikacja działająca w trybie usługi mikroserwisowej wewnątrz izolowanego kontenera \texttt{Docker}, napisana w języku Python. Zadaniem modułu jest ciągła akwizycja strumieni wideo, wielopoziomowa analiza klatek obrazu pod kątem występowania specyficznych klas obiektów oraz dynamiki ludzkiego szkieletu, a także podejmowanie zautomatyzowanych decyzji o inicjacji zapisu weryfikowanego materiału na podstawie elastycznych szablonów reguł.
+
+
+
+\section{Wykorzystane modele uczenia maszynowego}
+\label{sec:detektor_modele}
+
+Rozwiązanie postawionego problemu badawczego wymagało połączenia modeli o różnej specyfice operacyjnej: klasycznej detekcji bounding-box, regresji punktów kluczowych oraz klasyfikacji szeregów czasowych. Wybór architektur podyktowany był koniecznością zachowania ścisłego kompromisu pomiędzy precyzją (\texttt{mAP}) a opóźnieniem inferencji na pojedynczej klatce.
+
+\subsection{Detekcja obiektów: YOLOv26-m}
+Do zadań ogólnej detekcji przedmiotów oraz lokalizacji pojazdów wyznaczono model \textbf{YOLOv26-m}. Architektury z tej rodziny charakteryzują się jednoprzebiegowym wyznaczaniem obwiedni oraz wysoką odpornością na rozmycie w ruchu. Bazowy model docelowo operuje na 9 zdefiniowanych klasach istotnych z punktu widzenia bezpieczeństwa publicznego: człowiek (\texttt{human}), rower (\texttt{bicycle}), samochód (\texttt{car}), ptak (\texttt{bird}), kot (\texttt{cat}), pies (\texttt{dog}), plecak (\texttt{backpack}), walizka (\texttt{suitcase}) oraz nóż (\texttt{knife}). 
+
+Każdemu wykrytemu obiektowi przypisywany jest unikalny identyfikator instancji śledzony pomiędzy kolejnymi klatkami za pomocą algorytmu asocjacji przestrzennej. Pozwala to wyeliminować problem wielokrotnego zliczania tego samego przedmiotu w kadrze oraz umożliwia precyzyjne określenie czasu przebywania obiektu w strefie monitorowanej.
+
+Dodatkowo model został przystosowany do detekcji tablic rejestracyjnych, co jest wykorzystywane w anonimizacji.
+
+\subsection{Estymacja szkieletu: YOLOv11-pose}
+Za ekstrakcję ludzkiej kinematyki odpowiada sieć w konwolucyjnej wersji \textbf{YOLOv11-pose}. Model ten dla każdego wykrytego człowieka wyznacza wektor współrzędnych kartezjańskich w dwuwymiarowej przestrzeni kadru:
+\begin{equation}
+    P_i = \{(x_1, y_1, c_1), (x_2, y_2, c_2), \dots, (x_{17}, y_{17}, c_{17})\}
+\end{equation}
+gdzie $x_k, y_k$ oznaczają pozycję pikselową $k$-tego punktu kluczowego człowieka (m.in. oczy, uszu, barki, łokcie, nadgarstki, biodra, kolana i kostki), a $c_k \in [0, 1]$ stanowi stopień pewności predykcji (\textit{confidence score}) danego punktu. Wybór wariantu średniego (\texttt{medium}) podyktowany był optymalizacją przepustowości.
+
+\subsection{Klasyfikacja dynamiki ruchu: Głęboka sieć rekurencyjna LSTM}
+%TODO
+Rozpoznawanie skomplikowanych czynności temporalnych (takich jak upadek człowieka) na podstawie pojedynczej klatki wideo jest zadaniem obarczonym wysokim błędem. Obiekt leżący na ziemi może reprezentować odpoczywającego studenta lub osobę po utracie przytomności. Klasyfikacja intencji wymaga analizy trajektorii ruchu w czasie.
+
+W tym celu zaprojektowano dedykowany klasyfikator oparty na architekturze \textbf{Long Short-Term Memory (LSTM)}. Wejściem sieci jest macierz o wymiarach $30 \times 34$, reprezentująca sekwencję znormalizowanych współrzędnych płaskich ($17 \times 2$) z ostatnich 30 klatek wideo (co odpowiada oknu czasowemu o długości $\approx 1.2$ sekundy przy próbkowniu 25 FPS).
+
+\begin{figure}[H]
+    \centering
+    % Schemat klasyfikatora LSTM
+    \begin{tikzpicture}[
+        node distance=1.2cm,
+        font=\sffamily\footnotesize,
+        layer/.style={rectangle, draw=black!80, rounded corners=3pt, fill=green!5, thick, minimum width=7cm, minimum height=0.8cm, text centered},
+        io/.style={trapezium, trapezium angle=75, draw=black, fill=yellow!10, minimum width=5cm, text centered}
+    ]
+        \node (in) [io] {Wejście: Tensor szkieletu $[30 \times 34]$ (okno przesuwne)};
+        \node (l1) [layer, below=of in] {\textbf{Warstwa LSTM 1:} 64 jednostki ukryte (\textit{hidden units}) + Dropout(0.2)};
+        \node (l2) [layer, below=of l1] {\textbf{Warstwa LSTM 2:} 32 jednostki ukryte (\textit{hidden units}) + Dropout(0.2)};
+        \node (fc) [layer, below=of l2, fill=purple!5] {\textbf{Warstwa Pełna (Dense):} Funkcja aktywacji \texttt{Softmax}};
+        \node (out) [io, below=of fc, fill=red!10] {Wyjście: Prawdopodobieństwa 5 klas zachowań};
+
+        \draw [->, thick] (in) -- (l1);
+        \draw [->, thick] (l1) -- (l2);
+        \draw [->, thick] (l2) -- (fc);
+        \draw [->, thick] (fc) -- (out);
+    \end{tikzpicture}
+    \caption{Architektura klasyfikatora szeregów czasowych LSTM.}
+    \label{fig:architektura_lstm}
+\end{figure}
+
+Aby wyeliminować wpływ odległości postaci od kamery oraz lokalizacji człowieka w kadrze, surowe punkty szkieletu poddawane są geometrycznej normalizacji względem tułowia:
+\begin{equation}
+    \hat{x}_k = \frac{x_k - x_{\text{hip}}}{\mathcal{S}_{\text{torso}}}, \quad \hat{y}_k = \frac{y_k - y_{\text{hip}}}{\mathcal{S}_{\text{torso}}}
+\end{equation}
+gdzie $(x_{\text{hip}}, y_{\text{hip}})$ to punkt centralny miednicy (środek odcinka łączącego lewe i prawe biodro), natomiast $\mathcal{S}_{\text{torso}}$ stanowi euklidesową długość kręgosłupa wyznaczoną między miednicą a środkiem barków. 
+
+Dla każdej śledzonej osoby system utrzymuje w pamięci niezależną historię poz kinematycznych. W przypadku wystąpienia krótkotrwałych przesłonięć (\textit{occlusions} poniżej 5 klatek), brakujące współrzędne są ekstrapolowane liniowo z ostatniej znanej pozycji. Przerwy dłuższe powodują twardy reset bufora danej osoby, co zapobiega powstawaniu niefizycznych skoków wektora ruchu. Sieć klasyfikuje 5 wzorców zachowań: naturalne zachowanie tła (\texttt{background}), ćwiczenia/pajacyki (\texttt{jumping\_jacks}), przysiady (\texttt{squats}), intensywny bieg (\texttt{running}) oraz nagły upadek (\texttt{falling}). Wagi wyuczonej sieci są wczytywane z pliku \texttt{.pt} do pamięci kontenera podczas fazy inicjalizacji usługi.
+
+\section{Przygotowanie danych uczących i proces trenowania}
+\label{sec:detektor_trenowanie}
+
+Skuteczność systemu analitycznego operującego na żywym organizmie miejskim zależy od reprezentatywności i zróżnicowania zbiorów treningowych. Proces douczania poszczególnych modeli podzielono na oddzielne potoki badawcze zautomatyzowane za pomocą dyrektyw narzędzia \texttt{Make}.
+
+\subsection{Trenowanie detektora obiektów i tablic rejestracyjnych}
+Podstawą uczenia sieci \texttt{YOLOv26-m} był ogólnodostępny, potężny zbiór referencyjny \textbf{COCO} (\textit{Common Objects in Context}). Ponieważ zbiór ten posiada adnotacje dla ludzi i walizek, lecz całkowicie pomija specyfikę tablic rejestracyjnych pojazdów, konieczne stworzenie autorskiego, zintegrowanego korpusu danych.
+
+W tym celu wykorzystano dane z dwóch odrębnych źródeł:
+\begin{itemize}
+    \item Pozyskano otwarty zbiór monitoringu drogowego z platformy \textbf{Roboflow Universe}~\cite{license-plate-recognition-rxg4e_dataset} obejmujący ponad 8000 próbek. Zbiór ten posiadał jednak wadę w postaci nadreprezentacji nieeuropejskich tablic.
+    \item Zbiór bazowy wzbogacono o autorski zbiór nagrań z kamer samochodowych zarejestrowanych w warunkach polskich miast przy zmiennym oświetleniu i opadach atmosferycznych oraz z kamer przemysłowych zapewniających podobne warunki jak docelowe kamery. Zbiór ten znacząco poprawił wyniki modelu w dziedzinie wykrywania europejskich tablic rejestracyjnych.
+\end{itemize}
+
+Aby rozwiązać problem wzajemnego wykluczania etykiet (obrazy z COCO nie miały oznaczonych tablic, a obrazy z Roboflow nie miały oznaczonych samochodów), zastosowano dwuetapowe auto-etykietowanie. Klasyczny model YOLO oznaczający pojazdy naniósł obwiednie na zbiór tablic, natomiast wytrenowany wstępnie detektor tablic wygenerował braki w korpusie samochodowym. 
+
+Ostateczny zbiór treningowy poddano agresywnej augmentacji danych w locie, obejmującej: rotacje losowe w zakresie $\pm 10^\circ$, skalowanie obwiedni $\pm 10\%$, dodawanie syntetycznego szumu Gaussa oraz modyfikacje krzywej jasności obrazu. Hiperparametry optymalizacji obejmowały wektor: epoki $N=150$, rozmiar partii (\texttt{batch size}) rzędu 16, optymalizator \texttt{AdamW} z początkowym współczynnikiem uczenia $lr=0.001$ oraz liniowym harmonogramem wygaszania (\textit{cosine annealing}).
+
+\begin{table}[H]
+    \centering
+    \caption{Skuteczność lokalizacji wytrenowanego modelu detekcji obiektów na zbiorze walidacyjnym.}
+    \label{tab:yolo_metryki}
+    \begin{tabular}{l c c c c c}
+        \toprule
+        \textbf{Klasa obiektu} & \textbf{Liczba obrazów} & \textbf{Instancje} & \textbf{Precyzja (P)} & \textbf{Czułość (R)} & \textbf{mAP@0.5} \\
+        \midrule
+        Wszystkie (\textit{all}) & 1473 & 4660 & 0.752 & 0.588 & 0.668 \\
+        \texttt{car} & 535 & 1932 & 0.770 & 0.681 & 0.754 \\
+        \texttt{bicycle} & 149 & 316 & 0.720 & 0.522 & 0.621 \\
+        \texttt{cat} & 184 & 202 & 0.917 & 0.880 & 0.934 \\
+        \texttt{dog} & 177 & 218 & 0.816 & 0.812 & 0.844 \\
+        \texttt{suitcase} & 105 & 303 & 0.749 & 0.552 & 0.686 \\
+        \texttt{knife} & 181 & 326 & 0.649 & 0.365 & 0.437 \\
+        \texttt{license\_plate} & 241 & 383 & 0.713 & 0.692 & 0.749 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Jak wykazują dane z tabeli~\ref{tab:yolo_metryki}, model osiągnął bardzo wysoką precyzję dla klas o wyraźnych krawędziach geometrycznych (\texttt{cat}, \texttt{dog}, \texttt{car}). Zauważalny spadek parametru \texttt{mAP@0.5} dla klasy \texttt{knife} wynika ze znikomej powierzchni pikselowej noża w stosunku do rozdzielczości całej sceny wideo.
+
+\subsection{Trening klasyfikatora zachowań LSTM}
+%TODO
+Dane do wyuczenia klasyfikatora akcji wyodrębniono ze zbioru wideo \textbf{Kinetics-700} oraz bazy upadków \textbf{Le2i Fall Detection Dataset}. Z korpusu Kinetics wyselekcjonowano po 200 dziesięciosekundowych klipów dla klas biegu, przysiadów oraz pajacyków, natomiast z bazy Le2i pozyskano 300 nagrań symulowanych upadków w biurach i korytarzach. Klasę tła sformułowano na bazie 20 minut autorskich nagrań przechodniów spacerujących po kampusie uczelni.
+
+Każdy materiał wideo przepuszczono przez zamrożony moduł \texttt{YOLOv11-pose}, zapisując sekwencje tensorów stawów. Proces oznaczania etykiet czasowych (\textit{temporal labelling}) zrealizowano hybrydowo:
+\begin{enumerate}
+    \item Wygenerowano wstępnie znaczniki za pomocą algorytmu heurystycznego badającego nagłe szczyty energii kinetycznej wyznaczonej dla środka masy oraz nadgarstków.
+    \item Wygenerowane przedziały zweryfikowano i skorygowano ręcznie w dedykowanym narzędziu graficznym GUI, przesywając niedokładne granice początku i końca upadku. 
+\end{enumerate}
+Sieć \texttt{LSTM} uczono przez 60 epok z wykorzystaniem optymalizatora \texttt{Adam} ($lr=0.0005$). Ponieważ klasa naturalnego tła stanowiła ponad $70\%$ objętości korpusu, w funkcji straty (\texttt{Cross-Entropy Loss}) zastosowano dynamiczne wagi klas odwrotnie proporcjonalne do liczebności próbek, zapobiegając degeneracji modelu do ciągłego przewidywania stanu bezczynności.
+
+\section{Analiza kontekstu sceny: Strefy zakazane i detekcja tłumu}
+%TODO
+\label{sec:detektor_scena}
+
+Oprócz detekcji indywidualnych akcji, moduł przeprowadza ciągłą analizę relacji przestrzennych sceny. Kluczową funkcjonalnością biznesową jest wykrywanie naruszenia stref zakazanych (\texttt{Forbidden Zones Entry}) --- np. trawników, stref wyładunku czy pasów awaryjnych.
+
+Reguła wykluczenia definiowana jest przez operatora w aplikacji frontendowej jako dowolny wielokąt wypukły opisany ordered-listą wierzchołków pikselowych na obrazie referencyjnym kamery. Weryfikacja naruszenia strefy odbywa się bez ponownego obciążania procesora graficznego, bazując wyłącznie na wyznaczonym wcześniej szkieletowym modelu kinematycznym. Dla każdej postaci algorytm wyznacza punkt styku z podłożem (\textit{ground contact point} $G_p$):
+\begin{equation}
+    G_p = \begin{cases} 
+      \left( \frac{x_{\text{l\_ankle}} + x_{\text{r\_ankle}}}{2}, \; \frac{y_{\text{l\_ankle}} + y_{\text{r\_ankle}}}{2} \right) & \text{gdy kostki są widoczne ($c \ge 0.5$)} \\
+      \left( x_{\text{center}}, \; y_{\text{bbox\_max}} \right) & \text{gdy dolne kończyny są przesłonięte}
+   \end{cases}
+\end{equation}
+Przynależność punktu $G_p$ do wnętrza wielokąta weryfikowana jest szybkim algorytmem promienia (\textit{Ray Casting}). Liczba naruszeń agregowana jest w wektorze stanu i pozwala na tworzenie reguł typu: \enquote{\textit{zainicjuj alarm, gdy na lewym trawniku przebywają jednocześnie minimum 3 osoby}}.
+
+Równolegle działa podmoduł estymacji gęstości tłumu, który oblicza macierz odległości euklidesowych pomiędzy środkami tułowia wszystkich śledzonych osób. Jeżeli wokół dowolnej jednostki w promieniu $R=1.5$ metra znajduje się więcej niż zdefiniowana liczba $K$ osób, detektor aktywuje flagę formowania się zbiegowiska.
+
+\section{Automatyczna anonimizacja danych wrażliwych}
+\label{sec:detektor_anonimizacja}
+
+Przechowywanie materiałów wideo rejestrowanych w przestrzeni publicznej podlega rygorystycznym regulacjom prawnym narzucanym przez Ogólne Rozporządzenie o Ochronie Danych (RODO). Zgodnie z wytycznymi Europejskiej Rady Ochrony Danych (EROD), utrwalanie wizerunku twarzy osób postronnych bez ich zgody stanowi naruszenie prywatności~\cite{gdpr_video_surveillance}. Aby system odpowiadał wymogom legalności, przed trwałym zapisem na dysku wyizolowany fragment poddawany jest procesowi nieodwracalnej anonimizacji.
+
+\subsection{Anonimizacja wizerunku twarzy oparta na szkieletach}
+W celu anonimizacji twarzy osób znajdujących się na nagraniach wykorzystano wyniki uzyskane przy okazji wyznaczania szkieletu kinematycznego używanego w procesie klasyfikacji zachowań. Zawiera on punkty kluczowe określające położenie oczu, które służą do aproksymacji położenia głowy człowieka w ramach anonimizacji.
+
+Dla każdego wykrytego szkieletu moduł odczytuje współrzędne oczu $(x_{\text{le}}, y_{\text{le}})$, $(x_{\text{re}}, y_{\text{re}})$. Algorytm oblicza punkt centralny twarzy $C_{\text{face}}$ oraz dynamiczny promień maski rozmywającej $r_{\text{blur}}$:
+\begin{equation}
+    C_{\text{face}} = \left( \frac{x_{\text{le}} + x_{\text{re}}}{2}, \; \frac{y_{\text{le}} + y_{\text{re}}}{2} \right), \quad r_{\text{blur}} = 2.0 \times \sqrt{(x_{\text{le}} - x_{\text{re}})^2 + (y_{\text{le}} - y_{\text{re}})^2}
+\end{equation}
+
+W przypadku gdy wektor głowy jest odwrócony tyłem do obiektywu kamery, sieć szkieletowa przypisuje oczom niskie prawdopodobieństwo ($c < 0.3$). Algorytm automatycznie pomija wtedy nakładanie filtra, co zapobiega powstawaniu nieestetycznych, artefaktów na przechodniach. Na wyznaczony kolisty region nakładany jest filtr uśredniający. Operacja ta wykonywana jest iteracyjnie dla wszystkich instancji w kadrze, całkowicie uniemożliwiając identyfikację przechodniów.
+
+\subsection{Zabezpieczanie tablic rejestracyjnych}
+W analogiczny sposób anonimizowane są pojazdy samochodowe. Model YOLO po wykryciu obiektu klasy \texttt{license\_plate} zwraca współrzędne obwiedni prostokątnej $[x_{\text{min}}, y_{\text{min}}, x_{\text{max}}, y_{\text{max}}]$. Na wyznaczony prostokąt nakładana jest intensywna maska filtru uśredniającego. Ponieważ lokalizacja tablic odbywa się w ramach jednego, wspólnego przejścia sieci uczenia maszynowego YOLO wyznaczającej obiekty, narzut obliczeniowy procesu anonimizacji jest zawarty w ramach detekcji obiektów.
+
+\section{Weryfikacja praktyczna i ograniczenia rozdzielczości}
+\label{sec:detektor_wyniki}
