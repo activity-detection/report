@@ -1,13 +1,16 @@
 \chapter{Podsumowanie}
-Pomyślnie zrealizowano wszystkie założone cele projektu. Wytworzono moduły detektora, serwera API oraz serwera webowego.\ Detektor rozpoznaje zdarzenia na nagraniu testowym, prawidłowo animizuje twarze i zamazuje twarze.\ Zaistniał problem rozdzielczości kamery, tj.\ moduł detektora wymagał dopasowania hiperparametrów do nagrań z kamery testowej, aby móc dalej prawidłowo wykrywać obiekty na nagraniach.
+Pomyślnie zrealizowano wszystkie założone cele projektu. Wytworzono moduły detektora, serwera API oraz serwera webowego.\ Detektor rozpoznaje zdarzenia na nagraniu testowym, prawidłowo anonimizuje twarze wykrytych osób.\ W trakcie prac zidentyfikowano problem związany z rozdzielczością obrazu. Moduł detektora wymagał precyzyjnego dopasowania hiperparametrów do specyfiki kamery testowej, aby zapewnić wysoką skuteczność wykrywania obiektów na rejestrowanych nagraniach.
 
 \section{Dalsze możliwości rozwoju}
-System ma charakter prototypu. Wiele rzeczy można w nim pozmieniać i zoptymalizować. Można:
+Istnieje wiele potencjalnych ścieżek rozwoju, jakie może przyjąć projekt. Możliwe jest m.in.:
 \begin{enumerate}
-\item Dodać więcej wykrywanych obiektów i zdarzeń;
-\item Zoptymalizować pętlę przetwarzania klatek nagrań;
-\item Zoptymalizować \texttt{YOLO}, aby działało w rozsądnym czasie na nagraniach z monitoringu Politechniki Warszawskiej, poprzez lepsze dopasowanie hiperparametrów lub destylację wiedzy w sieci \texttt{YOLO}.
-\item Dodać mechanizm uwierzytelniania i autoryzacji w interfejsie użytkownika
-\item Zabezpieczyć punkty końcowe serwera \texttt{API} przed nieupoważnionym dostępem
-\item Rozbudować mechanizm detekcji zdarzeń o grę terenową.
+\item Zwiększenie liczby wykrywanych obiektów i zdarzeń;
+\item Zoptymalizowanie pętli przetwarzania klatek nagrań;
+\item Dodanie mechanizmu uwierzytelniania i autoryzacji w interfejsie użytkownika;
+\item Dodanie generowania dodatkowych opisów zdarzeń np.\ za pomocą modeli wizyjno-językowych;
+\item Zabezpieczenie punktów końcowych serwera \texttt{API} przed nieupoważnionym dostępem;
+\item Zastosowanie obecnego systemu w grze terenowej, w której gracze będą musieli wykonywać określone czynności na kamerach monitoringu. 
 \end{enumerate}
+Dzięki swojej modularnej budowie system może być rozbudowywany o nowe funkcjonalności, a obecny interfejs graficzny może zostać zastąpiony innym, gdyby zaszła taka potrzeba. Warto byłoby poważnie rozważyć
+zabezpieczenie serwera \texttt{API} przed nieupoważnionym dostępem, aby zbierane nagrania z kamer były dodatkowo chronione. Można rozważyć czy gromadzone nagrania nie powinny być przechowywane w datalake'u, aby
+zapewnić większą skalowalność i bezpieczeństwo danych. Możliwości rozwoju projektu są szerokie i nie brakuje pomysłów na jego dalszą rozbudowę.
