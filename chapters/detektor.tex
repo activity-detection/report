@@ -142,4 +142,173 @@ W przypadku gdy wektor głowy jest odwrócony tyłem do obiektywu kamery, sieć 
 \subsection{Zabezpieczanie tablic rejestracyjnych}
 W analogiczny sposób anonimizowane są pojazdy samochodowe. Model YOLO po wykryciu obiektu klasy \texttt{license\_plate} zwraca współrzędne obwiedni prostokątnej $[x_{\text{min}}, y_{\text{min}}, x_{\text{max}}, y_{\text{max}}]$. Na wyznaczony prostokąt nakładana jest intensywna maska filtru uśredniającego. Ponieważ lokalizacja tablic odbywa się w ramach jednego, wspólnego przejścia sieci uczenia maszynowego YOLO wyznaczającej obiekty, narzut obliczeniowy procesu anonimizacji jest zawarty w ramach detekcji obiektów.
 
+\section{Potok rejestracji i dystrybucji nagrań}\label{sec:detektor_potok}
+
+Wykrycie kombinacji obiektów lub zachowań odpowiadającej aktywnemu szablonowi nie powoduje natychmiastowego zapisu surowych klatek. Zarejestrowany materiał przechodzi przez wieloetapowy potok, którego zadaniem jest wyodrębnienie spójnego fragmentu zdarzenia, opatrzenie go metadanymi, anonimizacja oraz niezawodne dostarczenie do serwisu nadrzędnego. Potok zaprojektowano w taki sposób, aby kosztowne operacje (kodowanie wideo oraz komunikacja sieciowa) odbywały się w tle i nie wstrzymywały głównej pętli analizy klatek. Ogólny przebieg przetwarzania pojedynczego nagrania przedstawia poniższy schemat.
+
+\begin{figure-}
+    \centering
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}[
+        node distance=8mm,
+        font=\sffamily\footnotesize,
+        stage/.style={rectangle, draw=black!80, rounded corners=3pt, fill=pwblue!5, thick, text width=2.7cm, minimum height=1.4cm, align=center},
+        endp/.style={stage, fill=green!8},
+        flow/.style={-{Stealth[length=2.4mm]}, thick}
+    ]
+        \node (rec) [stage] {\texttt{Recorder}\\[2pt]\scriptsize wykrycie i cięcie na segmenty};
+        \node (mgr) [stage, right=of rec] {\texttt{ClipManager}\\[2pt]\scriptsize nazwa, powiązania, metadane};
+        \node (sav) [stage, right=of mgr] {\texttt{ClipSaver}\\[2pt]\scriptsize anonimizacja i~kodowanie MP4};
+        \node (upl) [stage, right=of sav] {\texttt{ClipUploader}\\[2pt]\scriptsize kolejka i~wysyłka};
+        \node (bk)  [endp, right=of upl] {Serwis nadrzędny\\[2pt]\scriptsize zapis i~odtwarzanie};
+        \draw[flow] (rec) -- (mgr);
+        \draw[flow] (mgr) -- (sav);
+        \draw[flow] (sav) -- (upl);
+        \draw[flow] (upl) -- (bk);
+    \end{tikzpicture}%
+    }
+    \caption{Potok przetwarzania pojedynczego nagrania: od wykrycia zdarzenia do trwałego zapisu w serwisie nadrzędnym.}\label{fig:potok_glowny}
+\end{figure-}
+
+\subsection{Buforowanie i wyodrębnianie zdarzeń}
+Pierwszym ogniwem potoku jest moduł rejestrujący, utrzymujący w pamięci ciągły bufor ostatnich klatek. Dzięki niemu w chwili rozpoznania zdarzenia system dysponuje również materiałem bezpośrednio je poprzedzającym. Moment rozpoczęcia oraz zakończenia rejestracji wyznacza maszyna stanów odporna na chwilowe wahania detekcji: zdarzenie rozpoczyna się dopiero wtedy, gdy warunek szablonu utrzymuje się przez odpowiednią część ostatnich klatek, trwa mimo krótkich przerw w wykrywaniu i kończy się dopiero po zadanym okresie bezczynności. Do wyodrębnionego fragmentu dołączany jest bufor sprzed oraz po zdarzeniu, co nadaje nagraniu kontekst sytuacyjny.
+
+Zdarzenia długotrwałe są przy tym dzielone na krótsze, kilkusekundowe segmenty po przekroczeniu maksymalnego czasu trwania pojedynczego fragmentu. Rozwiązanie to ogranicza rozmiar pojedynczego pliku i pozwala rozpocząć dalsze przetwarzanie wcześniejszych segmentów jeszcze w trakcie trwania zdarzenia. Mechanizm obsługuje również jednoczesną rejestrację wielu nakładających się na siebie zdarzeń, odpowiadających różnym aktywnym szablonom.
+
+\subsection{Składanie sekwencji i generowanie metadanych}
+Każdemu wyodrębnionemu segmentowi nadawana jest nazwa zawierająca znacznik czasu. Następujące po sobie fragmenty tego samego, ciągłego zdarzenia są ze sobą logicznie wiązane: kolejny segment przechowuje odwołanie do swojego poprzednika, dzięki czemu na poziomie serwisu nadrzędnego cała sekwencja odtwarza strukturę listy jednokierunkowej i może być prezentowana jako jedno, ciągłe nagranie za pośrednictwem protokołu DASH. Rozróżnienie, czy dany segment kontynuuje wcześniejsze zdarzenie, czy rozpoczyna nowe, opiera się na analizie długości przerw w aktywności pomiędzy kolejnymi fragmentami.
+
+Równolegle budowany jest opis nagrania. Dla każdej sekundy materiału wyznaczana jest najczęściej występująca liczba poszczególnych obiektów, a sąsiadujące sekundy o identycznej zawartości łączone są w przedziały czasowe. Powstaje w ten sposób zwięzła lista wykrytych obiektów wraz z zakresami ich występowania oraz przedział czasowy samego zdarzenia. Metadane te stanowią później podstawę znaczników prezentowanych na osi czasu odtwarzacza.
+
+\subsection{Anonimizacja, kodowanie i zapis}
+Wyodrębniony fragment poddawany jest opisanej w sekcji~\ref{sec:detektor_anonimizacja} anonimizacji, a następnie kodowany do formatu MP4 (kodek \texttt{H.264}). Odpowiedzialność za konwersję klipu na wideo skupiono w jednym komponencie, udostępniającym dwie formy wyniku: strumień bajtów w pamięci operacyjnej (na potrzeby wysyłki) oraz zapis na dysk (kopia lokalna lub odłożenie do ponownej wysyłki). Pomiary wykazały, że etap ten jest ograniczony wydajnością enkodera, dlatego zastosowano szybki wariant kodowania (\textit{preset}~\texttt{ultrafast}), co pozwala kolejce wysyłkowej nadążać za tempem produkcji segmentów.
+
+\subsection{Asynchroniczna wysyłka i powiązania segmentów}
+Gotowy fragment trafia do kolejki obsługiwanej przez wątek roboczy działający w tle, gdzie jest kodowany i przesyłany do serwisu nadrzędnego wraz z metadanymi. Dla każdego segmentu rozstrzygany jest stan jego zależności od poprzednika sekwencji:
+\begin{itemize}
+    \item \textbf{głowa} --- brak poprzednika (lub poprzednik bezpowrotnie utracony); segment wysyłany jest natychmiast jako początek nowej sekwencji;
+    \item \textbf{powiązanie} --- poprzednik został już potwierdzony przez serwis; segment dołącza odwołanie do jego identyfikatora;
+    \item \textbf{oczekiwanie} --- poprzednik jest jeszcze w trakcie wysyłki; segment czeka, aż tamten zostanie potwierdzony.
+\end{itemize}
+Kluczowym niezmiennikiem tego etapu jest to, że odwołanie do poprzednika wysyłane jest \emph{wyłącznie} wtedy, gdy dysponuje on potwierdzonym identyfikatorem z serwisu; nigdy nie powstaje odwołanie do nagrania, którego po stronie serwisu nie ma. Po pomyślnej wysyłce zachowywany jest jedynie lekki wpis historyczny służący do rozwiązywania powiązań; jest on usuwany zarówno po wysłaniu następcy danego segmentu, jak i po upływie zadanego czasu życia, co utrzymuje zużycie pamięci na ograniczonym poziomie niezależnie od czasu pracy systemu.
+
+\subsection{Działanie awaryjne: kolejka drugorzędna}\label{subsec:detektor_awaria}
+Aby chwilowa niedostępność serwisu nadrzędnego nie powodowała utraty zarejestrowanego materiału, potok wyposażono w odporną na błędy ścieżkę awaryjną, przedstawioną na poniższym schemacie.
+
+\begin{figure-}
+    \centering
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}[
+        node distance=18mm and 30mm,
+        font=\sffamily\footnotesize,
+        box/.style={rectangle, draw=black!80, rounded corners=3pt, fill=pwblue!5, thick, text width=2.9cm, minimum height=1.4cm, align=center},
+        sec/.style={box, fill=red!6, draw=black!60, dashed},
+        endp/.style={box, fill=green!8},
+        term/.style={box, fill=black!5},
+        flow/.style={-{Stealth[length=2.4mm]}, thick},
+        lbl/.style={font=\sffamily\scriptsize, fill=white, inner sep=2pt, align=center}
+    ]
+        \node (q1) [box] {Kolejka główna\\[2pt]\scriptsize worker próbuje wysłać};
+        \node (q2) [sec, right=of q1] {Kolejka drugorzędna\\[2pt]\scriptsize zrzut na dysk, bez klatek w~RAM};
+        \node (w)  [sec, right=of q2] {Wolny worker\\[2pt]\scriptsize ponawia co 10~s, głowa pierwsza};
+        \node (bk) [endp, right=of w] {Serwis nadrzędny\\[2pt]\scriptsize wysłano i~dowiązano};
+        \node (del)[term, below=of w] {Trwałe usunięcie\\[2pt]\scriptsize po 2~min bez sieci (TTL)};
+
+        \draw[flow] (q1) -- (q2) node[lbl, midway, above]{wyczerpane\\próby};
+        \draw[flow] (q2) -- (w);
+        \draw[flow] (w) -- (bk) node[lbl, midway, above]{sieć\\wróciła};
+        \draw[flow] (w) -- (del) node[lbl, midway, right]{brak\\sieci};
+        \draw[flow] (q1.north east) .. controls +(0.6,1.2) and +(-0.6,1.2) .. (q1.north west)
+            node[lbl, midway, above]{brak sieci:\\ponawianie};
+    \end{tikzpicture}%
+    }
+    \caption{Ścieżka awaryjna przy braku łączności z serwisem: ponawianie w~kolejce głównej, odłożenie na dysk w~kolejce drugorzędnej i~dwa możliwe zakończenia.}\label{fig:potok_awaria}
+\end{figure-}
+
+Gdy próba wysyłki kończy się niepowodzeniem, segment jest ponawiany w kolejce głównej przez ograniczoną liczbę prób z narastającym odstępem czasowym. Po ich wyczerpaniu nagranie jest kodowane i zrzucane na dysk, a następnie odkładane do \emph{kolejki drugorzędnej} (nazywanej w implementacji \enquote{fallback queue}). W pamięci operacyjnej pozostają wówczas wyłącznie metadane segmentu wraz z odwołaniem do jego poprzednika; klatki nie są dłużej przechowywane w~RAM, co zapobiega narastaniu zużycia pamięci podczas długotrwałej awarii sieci, a zachowane odwołanie pozwala później odtworzyć poprawną kolejność.
+
+Kolejkę drugorzędną obsługuje osobny wątek roboczy, odpytywany rzadziej niż kolejka główna. Ponawia on wysyłkę bezpośrednio z dysku, zachowując tę samą zasadę pierwszeństwa co kolejka główna: najpierw wysyłane są segmenty będące głowami sekwencji, a dopiero po ich potwierdzeniu segmenty zależne. Powrót łączności skutkuje wysłaniem nagrania i dowiązaniem go do sekwencji. Jeżeli jednak segment nie zostanie dostarczony w ciągu dwóch minut od odłożenia, jest trwale usuwany (mechanizm \textit{Time To Live}). Dzięki takiej konstrukcji pojedyncze nagranie nie ginie po cichu w razie krótkotrwałych problemów sieciowych, a jednocześnie kolejka awaryjna nie rośnie w nieskończoność.
+
 \section{Weryfikacja praktyczna i ograniczenia rozdzielczości}\label{sec:detektor_wyniki}
+
+System poddano weryfikacji na nagraniach symulujących docelowe otoczenie kampusu uczelni. Ocenie podlegały dwa aspekty: bieżącość przetwarzania (opóźnienie między zakończeniem nagrania a jego dostarczeniem) oraz poprawność samej detekcji zdarzeń i anonimizacji.
+
+\subsection{Bieżącość przetwarzania}
+Aby ocenić, jak blisko czasu rzeczywistego działa potok, dla każdego wysłanego klipu mierzono opóźnienie od momentu zakończenia jego rejestracji do chwili potwierdzenia wysyłki przez serwis nadrzędny. Pomiar obejmuje zatem pełną ścieżkę: ewentualny zapis na dysk, oczekiwanie w kolejce, anonimizację, kodowanie oraz transmisję. Każdy pomiar zapisywano do pliku \texttt{CSV} wraz z długością odpowiadającego mu nagrania, co umożliwiło ich bezpośrednie zestawienie.
+
+\begin{table-}
+    \centering
+    \small
+    \begin{tabular}{lrr}
+        \toprule
+        \textbf{Statystyka} & \textbf{Opóźnienie [s]} & \textbf{Długość klipu [s]} \\
+        \midrule
+        Średnia   & 5,41 & 5,77 \\
+        Mediana   & 5,06 & 6,08 \\
+        Minimum   & 2,19 & 2,84 \\
+        Maksimum  & 7,66 & 6,96 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Czas od zakończenia nagrywania klipu do potwierdzenia jego wysłania, zestawiony z długością nagrania (próba 26 klipów, maszyna domowa).}\label{tab:detektor_latency}
+\end{table-}
+
+Wyniki zebrane w powyższej tabeli prowadzą do istotnego wniosku: opóźnienie przetwarzania jest porównywalne z długością samego nagrania. Średni stosunek opóźnienia do długości klipu wyniósł około $0{,}9$, co oznacza, że nagranie staje się dostępne do odtworzenia mniej więcej w czasie własnego trwania, licząc od zakończenia rejestracji zdarzenia. W całej próbie żaden klip nie wymagał skorzystania z kolejki drugorzędnej (wszystkie zostały wysłane bezpośrednio z kolejki głównej), co potwierdza, że potok nadążał z bieżącym przetwarzaniem napływającego materiału. Pomiary uzyskano na komputerze klasy domowej, w trybie odtwarzania pliku wideo, przy wartości parametru \texttt{POSE\_IMGSZ} równej 1600 (zob.\ podrozdział~\ref{subsec:detektor_imgsz}).
+
+\subsection{Poprawność detekcji zachowań i stref}
+Detekcja upadków na materiale testowym przebiegała poprawnie, również w zróżnicowanych scenach i przy różnym ułożeniu postaci względem kamery. Przykłady prawidłowych wykryć przedstawiono poniżej.
+
+\begin{figure-}
+    \centering
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=0.95\textwidth]{images/detektor/upadek.png}
+        \subcaption{Wykrycie upadku.}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=0.95\textwidth]{images/detektor/upadek_2.png}
+        \subcaption{Wykrycie upadku w innej scenie.}
+    \end{subfigure}
+    \caption{Przykłady poprawnej detekcji upadku człowieka.}\label{fig:detektor_upadki}
+\end{figure-}
+
+Wysoką dokładność osiągnięto również w wykrywaniu naruszeń stref zakazanych. System poprawnie rozpoznaje zarówno pełne wejścia osób w obręb wyznaczonych obszarów, jak i sytuacje graniczne, gdy postać znajduje się dopiero na samej krawędzi strefy. Świadczy to o precyzji wyznaczania punktu styku z podłożem względem zdefiniowanego wielokąta.
+
+\begin{figure-}
+    \centering
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=0.95\textwidth]{images/detektor/strefa_trawnik_obie_full.png}
+        \subcaption{Pełne wejście na obie strefy (lewy i prawy trawnik).}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=0.95\textwidth]{images/detektor/strefa_trawnik_ledwo.png}
+        \subcaption{Wejście na samą granicę strefy.}
+    \end{subfigure}
+    \caption{Detekcja naruszenia stref zakazanych: pełne wejście oraz sytuacja graniczna.}\label{fig:detektor_strefy}
+\end{figure-}
+
+Należy zaznaczyć ograniczenie wynikające z natury analizy opartej na ciągłości szkieletu. Przy chwilowym zasłonięciu osoby przebywającej w strefie, na przykład w wyniku przejścia za drzewem, detekcja może zostać przerwana: klasyfikator zachowań wymaga nieprzerwanego okna czasowego pozy, a wyznaczenie obecności w strefie zakłada widoczność punktu styku z podłożem. Gdy tylko postać ponownie staje się widoczna, detekcja jest wznawiana, dzięki czemu przerwy te są możliwie krótkie.
+
+\subsection{Anonimizacja w praktyce}
+Mechanizm anonimizacji skutecznie zabezpiecza dane wrażliwe. Twarze wielu osób jednocześnie, ustawionych pod różnymi kątami i z różnie zwróconymi głowami, zostają poprawnie zamazane. Jednocześnie osoba zwrócona tyłem do obiektywu, dla której model przypisuje oczom niskie prawdopodobieństwo, jest prawidłowo pomijana, co pozwala uniknąć zbędnych artefaktów.
+
+\begin{figure-}
+    \centering
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=0.95\textwidth]{images/detektor/rozmycie_twarzy.png}
+        \subcaption{Rozmycie twarzy wielu osób.}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=0.95\textwidth]{images/detektor/auto.png}
+        \subcaption{Rozmycie tablicy rejestracyjnej.}
+    \end{subfigure}
+    \caption{Działanie modułu anonimizacji: twarze przechodniów oraz tablica rejestracyjna pojazdu.}\label{fig:detektor_anonimizacja}
+\end{figure-}
+
+W przypadku tablic rejestracyjnych zdarza się, że maska rozmycia obejmuje również niewielki fragment nadwozia sąsiadujący z tablicą. Jest to nieznaczny efekt uboczny, który nie wpływa negatywnie na czytelność pozostałych cech pojazdu, a co najważniejsze, sama tablica pozostaje całkowicie nieczytelna, co jest zgodne z zamierzonym celem.
+
+\subsection{Wpływ rozdzielczości przetwarzania}\label{subsec:detektor_imgsz}
+Istotny wpływ na jakość detekcji ma stała \texttt{POSE\_IMGSZ} w module detektora, odpowiadająca parametrowi \texttt{imgsz} przekazywanemu do modeli YOLO, czyli rozmiarowi obrazu, do którego skalowana jest klatka przed inferencją. Im większa wartość tego parametru, tym dokładniejsza detekcja, szczególnie obiektów małych lub odległych od kamery (jak omawiana wcześniej klasa \texttt{knife}), lecz tym dłuższy czas przetwarzania pojedynczej klatki. Dobór tej wartości stanowi więc kompromis zależny od dostępnego sprzętu oraz od rozdzielczości obrazu wejściowego.
+
+Przedstawione w podrozdziale~\ref{sec:detektor_wyniki} wyniki czasowe uzyskano przy wartości \texttt{POSE\_IMGSZ} równej 1600 na komputerze klasy domowej, co dało zadowalające opóźnienia przy zachowaniu wysokiej dokładności. Uruchomienie systemu na wydajniejszym sprzęcie pozwala podnieść ten parametr (a tym samym dokładność) bez pogorszenia bieżącości przetwarzania albo osiągnąć jeszcze krótsze opóźnienia przy zachowaniu dotychczasowej dokładności.
