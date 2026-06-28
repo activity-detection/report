@@ -22,7 +22,7 @@ składowania danych. Do składowania różnych rodzajów danych zostały wykorzy
     \item \textbf{Lokalny system plików (Pamięć dyskowa)} --- Stanowi fizyczny magazyn dla zapisywanych nagrań. Dane na dysku kategoryzowane wewnątrz struktury katalogów, których nazwy odpowiadają dacie rejestracji, a poszczególne pliki wideo posiadają w nazwie precyzyjny znacznik czasu ich zapisu, co umożliwia administratorom i operatorom, ich ręczną lokalizację bezpośrednio z poziomu systemu operacyjnego, gdyby zaszła taka potrzeba.
 \end{itemize}
 
-\begin{figure}[H]
+\begin{figure-}
     \centering
 
     \begin{subfigure}{\textwidth}
@@ -38,9 +38,8 @@ składowania danych. Do składowania różnych rodzajów danych zostały wykorzy
         \includegraphics[width=0.95\linewidth]{images/backend/przykladowy_stan_mapowan_w_bazie.png}
         \caption{Stan bazy danych ze zmapowanymi nagraniami.}
     \end{subfigure}
-
     \caption{Przykładowy stan dysku po zapisie nagrań fragmentów detekcji wraz z odzwierciedlającymi je mapowaniami zapisanymi w bazie danych.}
-\end{figure}
+\end{figure-}
 
 
 \subsection{Architektura potoku zapisu i mapowania danych}
@@ -68,11 +67,11 @@ na zmiany w stanie plików, również w trakcie pracy systemu, Informując o dok
 z synchronizacją. Zapewnia to, że przechowywane w bazie wiersze mapujące nagrania 
 są zawsze bezwzględnym odzwierciedleniem stanu faktycznego zapisanych na dysku nagrań.
 
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \includegraphics[width=0.9\textwidth]{images/backend/diagram_backend.png}
     \caption{Architektura potoku zapisywania oraz odczytu i strumieniowania nagrań wideo.}
-\end{figure}
+\end{figure-}
 
 
 \section{Opis funkcjonalności}
@@ -95,11 +94,11 @@ generowanej w ramach zapisywanych mapowań do bazy danych. Jako ważne elementy 
 \end{itemize}
 Zastosowanie wspólnego \texttt{origin\_id} eliminuje konieczność iteracyjnego, kosztownego przeszukiwania bazy „element po elemencie” podczas odczytu, kierując się jedynie dowiązaniami z \texttt{referenced\_video\_id}, przy wyszukiwaniu sekwencji. Zamiast tego system jednym zapytaniem \texttt{SQL} pobiera wszystkie rekordy o danym \texttt{origin\_id}, a dopiero następnie w pamięci \texttt{RAM} układane są one w prawidłowej kolejności przy wykorzystaniu \texttt{referenced\_video\_id}, przygotowując do wyświetlenia.
 
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \includegraphics[width=0.8\textwidth]{images/backend/przykladowa_sekwencja.png}
     \caption{Diagram logiczny struktury przykładowej sekwencji nagrań wideo.}
-\end{figure}
+\end{figure-}
 
 \subsection{Mechanizm naprawy powiązań sekwencji}
 System, poza usuwaniem całych sekwencji, pozwala z poziomu \texttt{API} na kasowanie pojedynczych, 
@@ -160,11 +159,11 @@ W strukturze przesyłanego zapytania z modułu detekcji zawarte są następując
     \item \texttt{details} --- Blok w formacie \texttt{JSON}, generowany moduł detektora. Zawiera on ustrukturyzowany opis detekcji, w tym wykaz klas wszystkich wykrytych obiektów oraz znaczniki czasowe określające zakres wykrycia elementów wewnątrz przesyłanego wideo.
 \end{itemize}
 
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \includegraphics[width=0.8\textwidth]{images/backend/przykladowe_zapytanie_zapisu_do_backendu.png}
     \caption{Przykładowe zapytanie zapisu detekcji.}
-\end{figure}
+\end{figure-}
 
 \subsection{Strumieniowanie multimediów przy użyciu protokołu \texttt{DASH}}
 Ostatnią kluczową funkcjonalnością jest dostarczanie wideo do interfejsu użytkownika obsługujące 
@@ -182,8 +181,8 @@ fizycznego podzielenia danych na dysku, odtwarzany materiał zachowuje iluzję c
 przy jednoczesnym wyeliminowaniu opóźnień sieciowych i długiego buforowanie, jak w przypadku jednolitych
 długich plików wideo.
 
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \includegraphics[width=0.7\textwidth]{images/backend/Diagram_DASH.png}
     \caption{Potok odczytu sekwencji nagrań.}
-\end{figure}
+\end{figure-}

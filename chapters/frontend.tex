@@ -23,7 +23,7 @@ Dodatkowo wykorzystano następujące biblioteki:
 \end{itemize}
 
 \subsection{Implementacja}
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \begin{tikzpicture}[
         base/.style={draw, rectangle, rounded corners=3pt, align=center, font=\small, inner sep=5pt},
@@ -73,7 +73,7 @@ Dodatkowo wykorzystano następujące biblioteki:
     \draw[arrow] (s2.north) -- (c2.south east);
     \end{tikzpicture}
     \caption{Modularny podział warstwy prezentacyjnej z wyodrębnieniem domen funkcjonalnych.}\label{fig:modular_architecture_diagram}
-\end{figure}
+\end{figure-}
 Aplikacja jest jednostronna (ang. \textit{Single Page Application}), co oznacza, że nie wykorzystuje ona trasowania po stronie serwera i działa jedynie w korzeniu domeny.
 
 Zastosowana architektura modułu interfejsu użytkownika jest zorientowana na funkcjonalności (ang. \textit{Feature-Driven Architecture}). Oznacza to, że każda funkcjonalność ma własne komponenty interfejsu użytkownika, jak i również magazyny i hooki. Część podmodułów jest wspólna dla całego modułu, np.\ komponenty \texttt{shadcn/ui}. Podobnie jest z klientem API, z którego korzystają wszystkie funkcjonalności. 
@@ -85,7 +85,7 @@ Wspomniane hooki i magazyny (ang. \textit{store}) są wykorzystywane do zarządz
 \subsection{Obsługa motywów}
 Moduł interfejsu użytkownika obsługuje dwa motywy: jasny i ciemny. Co prawda nie istnieje żaden przełącznik w interfejsie użytkownika, który pozwalałby na zmianę motywu, ale można to uczynić poprzez zmianę ustawień systemowych w przeglądarce internetowej, do której dopasowuje się aplikacja.
 
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \begin{subfigure}{0.45\textwidth}
         \includegraphics[width=0.95\textwidth]{images/frontend/interfejs_jasny.png}
@@ -98,39 +98,39 @@ Moduł interfejsu użytkownika obsługuje dwa motywy: jasny i ciemny. Co prawda 
     \end{subfigure}
 
     \caption{Widok aplikacji w motywach jasnym i ciemnym.}
-\end{figure}
+\end{figure-}
 
 \subsection{Lista i wyświetlacz nagrań}
 
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \includegraphics[width=0.95\textwidth]{images/frontend/interfejs.png}
     \caption{Lista nagrań wideo z możliwością ich odtwarzania.}\label{fig:frontend_recordings_list}
-\end{figure}
+\end{figure-}
 
 Na \myref[rysunku]{fig:frontend_recordings_list} przedstawiono listę nagrań wideo. Widać, że jest ich pięć (\textit{Showing 5 of 5 videos}) oraz że wszystkie są na jednej stronie (\textit{1 of 1}). Każde nagranie posiada opis (nie zaimplementowano uzyskiwania opisów za pomocą wizyjnego modelu językowego), listę zarejestrowanych zdarzeń oraz zarejestrowanych detekcji z przedziałami czasowymi, w których mają miejsce.
 Wyświetlacz nagrań można zmaksymalizować, ale wbrew temu, co może sugerować umieszczona na nim zębatka, niemożliwa jest zmiana jakości przesyłanego strumienia wideo. 
 
 \subsubsection{Filtrowanie po dacie}
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \includegraphics[width=0.95\textwidth]{images/frontend/filtrowanie.png}
     \caption{Filtrowanie nagrań wideo po dacie.}\label{fig:frontend_date_filter}
-\end{figure}
+\end{figure-}
 
 Aplikacja umożliwia filtrowanie nagrań wideo po dacie. Na \myref[rysunku]{fig:frontend_date_filter} przedstawiono widok, na którym wybrano już dolny przedział daty od 25 czerwca 2026 r., a górny jest dopiero w trakcie wybierania. Nie wyświetliło się żadne z nagrań.
 
 \subsubsection{Usuwanie nagrań}
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \includegraphics[width=0.95\textwidth]{images/frontend/usuwanie.png}
     \caption{Usuwanie nagrań wideo.}\label{fig:frontend_delete_recordings}
-\end{figure}
+\end{figure-}
 Powyższy rysunek przedstawia zaznaczone do usunięcia nagrania wideo. Po kliknięciu przycisku \textit{Delete video} na serwer API trafi żądanie usunięcia nagrań z bazy danych.
 
 \subsection{Ustawienia detekcji zdarzeń}
 
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \begin{subfigure}{0.49\textwidth}
         \includegraphics[width=0.95\textwidth]{images/frontend/zasady_wykrywania.png}
@@ -142,41 +142,41 @@ Powyższy rysunek przedstawia zaznaczone do usunięcia nagrania wideo. Po klikni
         \subcaption{Wykrywane obszary.}
     \end{subfigure}
     \caption{Widok ustawień.}\label{fig:frontend_settings}
-\end{figure}
+\end{figure-}
 
 Ustawienia dzielą się na dwie sekcje przedstawione na \myref[rysunku]{fig:frontend_settings}. W pierwszej z nich użytkownik może zarządzać szablonami detekcji, a w drugiej wykrywanymi obszarami.
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \includegraphics[width=0.95\textwidth]{images/frontend/wektory_wykryc.png}
     \caption{Przykład wprowadzonych szablonów wykryć.}\label{fig:frontend_detection_vectors}
-\end{figure}
+\end{figure-}
 
 Jak widać na \myref[rysunku]{fig:frontend_detection_vectors}, użytkownik może zarządzać wprowadzonymi szablonami wykryć poprzez ich edycję, dodawanie i usuwanie.
 
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \includegraphics[width=0.95\textwidth]{images/frontend/obszary_wykluczone.png}
     \caption{Przykład wprowadzonych zakazanych obszarów.}\label{fig:frontend_restricted_areas}
-\end{figure}
+\end{figure-}
 
 W przypadku zakazanych obszarów niemożliwe jest ich edytowanie, a jedynie dodawanie i usuwanie. Na \myref[rysunku]{fig:frontend_restricted_areas} pokazane są dwa zakazane obszary, które zostały wprowadzone przez użytkownika.
 
 \subsection{Dodawanie szablonów detekcji}
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \includegraphics[width=0.95\textwidth]{images/frontend/wektor_podrozni.png}
     \caption{Przykład dodawania szablonu wykryć.}
-\end{figure}
+\end{figure-}
 Powyższy rysunek przedstawia dodawanie szablonu wykryć. W tym przypadku użytkownik wprowadza szablon złożony z pojedynczego wektora, który wykrywa 2 ludzi i 2 teczki. Samo wprowadzenie szablonu nie wystarcza, aby zapisał się on w bazie danych. Konieczne jest wciśnięcie przycisku \enquote{Create}.
 
 \subsection{Dodawanie zakazanych obszarów}
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \includegraphics[width=0.95\textwidth]{images/frontend/zakazane_obszary_dodawanie.png}
     \caption{Przykład dodawania zakazanego obszaru.}
-\end{figure}
+\end{figure-}
 Funkcjonalność pozwala na tworzenie wielokątów na obrazie z kamery, które będą traktowane jako zakazany obszar. Poniżej przykłady obszarów lewego i prawego trawnika:
-\begin{figure}[H]
+\begin{figure-}
     \centering
     \begin{subfigure}{0.49\textwidth}
         \includegraphics[width=0.95\textwidth]{images/frontend/lewy_trawnik.png}
@@ -188,5 +188,5 @@ Funkcjonalność pozwala na tworzenie wielokątów na obrazie z kamery, które b
         \subcaption{Prawy trawnik.}
     \end{subfigure}
     \caption{Zaznaczone obszary.}\label{fig:frontend_grass_areas}
-\end{figure}
+\end{figure-}
 Wymagane jest zatem, aby w bazie danych były już zarejestrowane jakieś nagrania wideo, aby można było na ich podstawie wyznaczyć zakazane obszary. 

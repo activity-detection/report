@@ -7,7 +7,8 @@
 \usepackage{fontspec}
 \usepackage[polish]{babel}
 \usepackage[autostyle=true]{csquotes}
-\usepackage{unicode-math} 
+\usepackage{unicode-math}
+\usepackage{siunitx}
 
 \setmainfont{Libertinus Serif}[
     UprightFont = *-Regular,
@@ -28,9 +29,9 @@
 % 2. Typografia i Geometria Obrazu
 % ==========================================
 \usepackage{microtype} 
-\usepackage{setspace}
-\onehalfspacing
 \raggedbottom
+
+\linespread{1.25}
 
 \clubpenalty=10000        
 \widowpenalty=10000       
@@ -58,22 +59,24 @@
 \definecolor{darkgray}{RGB}{50, 50, 50}
 \definecolor{codebackground}{RGB}{245, 245, 245}
 
-\AtBeginDocument{%
-    \addtokomafont{disposition}{\color{pwblue}\sffamily\bfseries}
-    \addtokomafont{chapter}{\LARGE}
-    \addtokomafont{section}{\Large}
-    \addtokomafont{title}{\normalfont\sffamily\bfseries\Huge\color{pwblue}}
-    \addtokomafont{subtitle}{\normalfont\sffamily\large\color{darkgray}}
-    \addtokomafont{author}{\normalfont\normalsize}
-    \addtokomafont{date}{\normalfont\normalsize\color{darkgray}}
-}
+\addtokomafont{disposition}{\color{pwblue}\sffamily\bfseries}
+\addtokomafont{chapter}{\LARGE}
+\addtokomafont{section}{\Large}
+\addtokomafont{title}{\normalfont\sffamily\bfseries\Huge\color{pwblue}}
+\addtokomafont{subtitle}{\normalfont\sffamily\large\color{darkgray}}
+\addtokomafont{author}{\normalfont\normalsize}
+\addtokomafont{date}{\normalfont\normalsize\color{darkgray}}
+\addtokomafont{caption}{\small\itshape}
+\addtokomafont{captionlabel}{\normalfont\bfseries\color{pwblue}}
+
+\renewcommand*{\captionformat}{\quad}
+\setcaptionalignment{j} 
 
 % ==========================================
 % 4. Nagłówki, Stopki i Linki (Kolejność krytyczna!)
 % ==========================================
 \usepackage[automark, headsepline=0.4pt]{scrlayer-scrpage}
 \usepackage{hyperref}
-\usepackage[nameinlink]{cleveref} % MUSI być po hyperref
 \usepackage{url}
 
 \clearpairofpagestyles
@@ -94,12 +97,8 @@
 % 5. Grafika, Listingi i Bibliografia
 % ==========================================
 \usepackage{graphicx}
-\usepackage{float}
-%\usepackage{svg}
-\usepackage{caption}
 \usepackage{subcaption}
 \usepackage{booktabs}
-\captionsetup{font=small, labelfont={bf,color=pwblue}, margin=10pt}
 
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit, backgrounds}
